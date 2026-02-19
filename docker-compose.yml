@@ -65,15 +65,11 @@ services:
     volumes:
       - ./db/migrations:/docker-entrypoint-initdb.d
       - ./gen:/home/gen/
-      - ./config_postgres.conf:/etc/postgresql/postgresql.conf
-      - ./log:/var/log/
     environment:
       TZ: Europe/Moscow
       POSTGRES_DB: patefon
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
-    user: "999:999"
     restart: always
 
 

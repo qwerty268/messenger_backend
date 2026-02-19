@@ -417,132 +417,132 @@ COMMENT ON TABLE public.chat_branch
 -- PostgreSQL database dump complete
 --
 
-INSERT INTO public.chat_type (value) VALUES
-('personal'),
-('group'),
-('channel'),
-('branch');
+-- INSERT INTO public.chat_type (value) VALUES
+-- ('personal'),
+-- ('group'),
+-- ('channel'),
+-- ('branch');
 
-INSERT INTO  public.user_role ( value) VALUES
-('none'),
-('owner'),
-('admin');
+-- INSERT INTO  public.user_role ( value) VALUES
+-- ('none'),
+-- ('owner'),
+-- ('admin');
 
---
--- Insert test data to user
---
-INSERT INTO message_type (value) VALUES 
-    ('default'),
-    ('informational'),
-    ('with_payload'),
-    ('sticker');
+-- --
+-- -- Insert test data to user
+-- --
+-- INSERT INTO message_type (value) VALUES 
+--     ('default'),
+--     ('informational'),
+--     ('with_payload'),
+--     ('sticker');
 
-INSERT INTO  payload_type (value) VALUES
-('file'),
-('photo');
+-- INSERT INTO  payload_type (value) VALUES
+-- ('file'),
+-- ('photo');
 
-INSERT INTO sticker (id, sticker_path) VALUES
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
-    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f466313dbaf51a93aa2e4'),
-    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f391413dbaf51a93aa2db'),
-    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d25b5803e3d181d0ecc4'),
-    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4535803e3d181d0ecc6'),
-    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7'),
-    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5135803e3d181d0ecc8'),
-    ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5505803e3d181d0ecc9'),
-    ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca'),
-    ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8aa5803e3d181d0eccb'),
-    ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8d85803e3d181d0eccc'),
-    ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8f45803e3d181d0eccd'),
-    ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d90e5803e3d181d0ecce'),
-    ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d9215803e3d181d0eccf');
-
-
-
-INSERT INTO sticker_pack (id, photo) VALUES
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
-    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca');
-
-INSERT INTO sticker_sticker_pack (id, sticker, pack) VALUES
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80','a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80','b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80','c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80','d0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80','e0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80','f0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80','a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80','f1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80','f2a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80','f3a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80','f4a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80','f5a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80','f6a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
-    ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80','f7a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80');
-
-INSERT INTO public."user" (id, username, version, password, name, bio, birthdate, avatar_path) VALUES
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'patefon', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Patefon', 'Offical 👽', '1999-12-31T00:00:00Z', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png'),
-    ('39a9aea0-d461-437d-b4eb-bf030a0efc80', 'user11', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Бал Матье', 'Люблю путешествия 🌍', '1990-05-15T00:00:00Z', '/uploads/avatar/642c5a57-ebc7-49d0-ac2d-f2f1f474bee7.png'),
-    ('fa4e08e4-1024-49cb-a799-4aa2a4f3a9df', 'user22', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Жабка Пепе', 'Кулинар и знаток природы 🍽️🦎', '1992-08-28T00:00:00Z', '/uploads/avatar/d60053d3-e3a9-4a30-b9a3-cdfdc3431fde.png'),
-    (gen_random_uuid(), 'user33', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Dr Peper', 'Люблю газированные напитки 🥤', '1988-12-01T00:00:00Z', NULL),
-    (gen_random_uuid(), 'user44', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Vincent Vega', 'Фанат кино 🎬', '1985-07-14T00:00:00Z', '/uploads/avatar/8027453b-fb36-452d-92dc-c356075fabef.png');
-
-
---
--- Insert test data to contacts
---
-
-INSERT INTO contact (id, user_id, contact_id) VALUES 
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user22')),
-    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user33')),
-    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user44')),
-    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user22'), (SELECT id FROM public."user" WHERE username = 'user11')),
-    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user22'), (SELECT id FROM public."user" WHERE username = 'user33')),
-    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user33'), (SELECT id FROM public."user" WHERE username = 'user22'));
-
-
-INSERT INTO chat (chat_name, chat_type_id, id) VALUES
-    ('oleg', 1, 'a9a9aea0-d461-437d-b4eb-bf030a0efc80'),
-    ('kizaru', 1, 'b9a9aea0-d461-437d-b4eb-bf030a0efc80'),
-    ('marsel', 2, 'c9a9aea0-d461-437d-b4eb-bf030a0efc80'),
-    ('funny channel', 3, 'd9a9aea0-d461-437d-b4eb-bf030a0efc80'),
-    ('not funny channel', 3, 'e9a9aea0-d461-437d-b4eb-bf030a0efc80'),
-    ('my little channel', 3, 'f9a9aea0-d461-437d-b4eb-bf030a0efc80');
-
-INSERT INTO chat (chat_name, chat_type_id, id, avatar_path) VALUES
-    ('patefon', 3, 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png');
+-- INSERT INTO sticker (id, sticker_path) VALUES
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
+--     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f466313dbaf51a93aa2e4'),
+--     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f391413dbaf51a93aa2db'),
+--     ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d25b5803e3d181d0ecc4'),
+--     ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4535803e3d181d0ecc6'),
+--     ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7'),
+--     ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5135803e3d181d0ecc8'),
+--     ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5505803e3d181d0ecc9'),
+--     ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca'),
+--     ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8aa5803e3d181d0eccb'),
+--     ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8d85803e3d181d0eccc'),
+--     ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8f45803e3d181d0eccd'),
+--     ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d90e5803e3d181d0ecce'),
+--     ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d9215803e3d181d0eccf');
 
 
 
-INSERT INTO chat_user (id, user_role_id, chat_id, user_id) VALUES
-    ('a2a0aaa0-d461-437d-b4eb-bf030a0efc80', 3, (SELECT id FROM public.chat WHERE chat_name = 'patefon'), (SELECT id FROM public.user where username ='patefon')),
-    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2, (SELECT id FROM public.chat WHERE chat_name = 'oleg'), (SELECT id FROM public.user where username ='user11')),
-    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'oleg'),  (SELECT id FROM public.user where username ='user22')),
-    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'kizaru'), (SELECT id FROM public.user where username ='user11')),
-    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'kizaru'), (SELECT id FROM public.user where username ='user44')),
-    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user11')),
-    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user22')),
-    ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user33')),
-    ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user44')),
-    ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user11')),
-    ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user22')),
-    ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user33')),
-    ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user22')),
-    ('f8a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user44')),
-    ('f9a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user33')),
-    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'my little channel'), (SELECT id FROM public.user where username ='user44'));
+-- INSERT INTO sticker_pack (id, photo) VALUES
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
+--     ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca');
+
+-- INSERT INTO sticker_sticker_pack (id, sticker, pack) VALUES
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80','a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80','b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80','c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80','d0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80','e0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80','f0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80','a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80','f1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80','f2a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80','f3a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80','f4a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80','f5a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80','f6a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+--     ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80','f7a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80');
+
+-- INSERT INTO public."user" (id, username, version, password, name, bio, birthdate, avatar_path) VALUES
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'patefon', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Patefon', 'Offical 👽', '1999-12-31T00:00:00Z', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png'),
+--     ('39a9aea0-d461-437d-b4eb-bf030a0efc80', 'user11', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Бал Матье', 'Люблю путешествия 🌍', '1990-05-15T00:00:00Z', '/uploads/avatar/642c5a57-ebc7-49d0-ac2d-f2f1f474bee7.png'),
+--     ('fa4e08e4-1024-49cb-a799-4aa2a4f3a9df', 'user22', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Жабка Пепе', 'Кулинар и знаток природы 🍽️🦎', '1992-08-28T00:00:00Z', '/uploads/avatar/d60053d3-e3a9-4a30-b9a3-cdfdc3431fde.png'),
+--     (gen_random_uuid(), 'user33', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Dr Peper', 'Люблю газированные напитки 🥤', '1988-12-01T00:00:00Z', NULL),
+--     (gen_random_uuid(), 'user44', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Vincent Vega', 'Фанат кино 🎬', '1985-07-14T00:00:00Z', '/uploads/avatar/8027453b-fb36-452d-92dc-c356075fabef.png');
 
 
-INSERT INTO message (id, chat_id, author_id, sticker_path, message_type_id, sent_at) VALUES
-    ('a9a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7', 4, '1999-12-31 00:00:00.881 +0300');
+-- --
+-- -- Insert test data to contacts
+-- --
 
-INSERT INTO message (id, chat_id, author_id, message, message_type_id, sent_at) VALUES
-    ('a8a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'Привет! 🎉 
+-- INSERT INTO contact (id, user_id, contact_id) VALUES 
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user22')),
+--     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user33')),
+--     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user44')),
+--     ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user22'), (SELECT id FROM public."user" WHERE username = 'user11')),
+--     ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user22'), (SELECT id FROM public."user" WHERE username = 'user33')),
+--     ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user33'), (SELECT id FROM public."user" WHERE username = 'user22'));
 
-Добро пожаловать в Патефон! Мы рады видеть тебя здесь. Это пространство для общения, обмена идеями и просто хорошего времяпрепровождения. 
 
-Здесь ты сможешь находить новых друзей, участвовать в интересных беседах и делиться своими увлечениями. Если у тебя возникнут вопросы или потребуется помощь, не стесняйся обращаться к нашей команде поддержки.
+-- INSERT INTO chat (chat_name, chat_type_id, id) VALUES
+--     ('oleg', 1, 'a9a9aea0-d461-437d-b4eb-bf030a0efc80'),
+--     ('kizaru', 1, 'b9a9aea0-d461-437d-b4eb-bf030a0efc80'),
+--     ('marsel', 2, 'c9a9aea0-d461-437d-b4eb-bf030a0efc80'),
+--     ('funny channel', 3, 'd9a9aea0-d461-437d-b4eb-bf030a0efc80'),
+--     ('not funny channel', 3, 'e9a9aea0-d461-437d-b4eb-bf030a0efc80'),
+--     ('my little channel', 3, 'f9a9aea0-d461-437d-b4eb-bf030a0efc80');
 
-Начни свое путешествие с Патефоном прямо сейчас — приятно провести время! 💬✨', 1, '1999-12-31 00:00:00.881 +0300');
+-- INSERT INTO chat (chat_name, chat_type_id, id, avatar_path) VALUES
+--     ('patefon', 3, 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png');
+
+
+
+-- INSERT INTO chat_user (id, user_role_id, chat_id, user_id) VALUES
+--     ('a2a0aaa0-d461-437d-b4eb-bf030a0efc80', 3, (SELECT id FROM public.chat WHERE chat_name = 'patefon'), (SELECT id FROM public.user where username ='patefon')),
+--     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2, (SELECT id FROM public.chat WHERE chat_name = 'oleg'), (SELECT id FROM public.user where username ='user11')),
+--     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'oleg'),  (SELECT id FROM public.user where username ='user22')),
+--     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'kizaru'), (SELECT id FROM public.user where username ='user11')),
+--     ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'kizaru'), (SELECT id FROM public.user where username ='user44')),
+--     ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user11')),
+--     ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user22')),
+--     ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user33')),
+--     ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'marsel'), (SELECT id FROM public.user where username ='user44')),
+--     ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user11')),
+--     ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user22')),
+--     ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'funny channel'), (SELECT id FROM public.user where username ='user33')),
+--     ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user22')),
+--     ('f8a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user44')),
+--     ('f9a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user33')),
+--     ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'my little channel'), (SELECT id FROM public.user where username ='user44'));
+
+
+-- INSERT INTO message (id, chat_id, author_id, sticker_path, message_type_id, sent_at) VALUES
+--     ('a9a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7', 4, '1999-12-31 00:00:00.881 +0300');
+
+-- INSERT INTO message (id, chat_id, author_id, message, message_type_id, sent_at) VALUES
+--     ('a8a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'Привет! 🎉 
+
+-- Добро пожаловать в Патефон! Мы рады видеть тебя здесь. Это пространство для общения, обмена идеями и просто хорошего времяпрепровождения. 
+
+-- Здесь ты сможешь находить новых друзей, участвовать в интересных беседах и делиться своими увлечениями. Если у тебя возникнут вопросы или потребуется помощь, не стесняйся обращаться к нашей команде поддержки.
+
+-- Начни свое путешествие с Патефоном прямо сейчас — приятно провести время! 💬✨', 1, '1999-12-31 00:00:00.881 +0300');
 
 CREATE OR REPLACE FUNCTION add_user_to_default_chat()
 RETURNS TRIGGER AS $$

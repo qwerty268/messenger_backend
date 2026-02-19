@@ -34,6 +34,13 @@ swagger:
 test:
 	go test ./...
 
+database-up:
+	docker compose -f docker-compose.yml up --build -d postgres
+
+# пока только тесты репо чатов
+test-integration: database-up
+	cd main_app/internal/chats/repository && go test -v ./... -tags integration
+
 # Команда для отчета покрытия тестами
 cover:
 	go test -json ./... -coverprofile coverprofile_.tmp -coverpkg=./... ; \

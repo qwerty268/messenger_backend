@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/cors"
@@ -73,7 +74,14 @@ func main() {
 	ctx := context.Background()
 
 	pool := connectToPSQL()
+
+	postgresDSN := "postgresql://postgres:postgres@localhost:5450/postgres?sslmode=disable"
+	db, err := sqlx.Connect("postgres", postgresDSN)
+	if err != nil {
+		log.Fatalf("failed sqlx connect: %v", err)
+	}
 	defer pool.Close()
+
 	log.Println("База данных подключена")
 
 	// подключаем rebbit mq
@@ -159,7 +167,7 @@ func main() {
 	// chats
 	messageRepo := messageRepository.NewMessageRepositoryImpl(pool)
 
-	chatRepo, _ := chatRepository.NewChatRepository(pool)
+	chatRepo, _ := chatRepository.NewChatRepository(db)
 
 	messageUsecase := messageUsecase.NewMessageUsecaseImpl(filesUC, messageRepo, chatRepo, ch)
 
@@ -321,6 +329,8 @@ func connectToPSQL() *pgxpool.Pool {
 		config.Database.DBName,
 		config.Database.MaxPoolSize,
 	)
+
+	fmt.Printf("connStr: %v\n", connStr)
 
 	// Настройка пула соединений
 	poolConfig, err := pgxpool.ParseConfig(connStr)
