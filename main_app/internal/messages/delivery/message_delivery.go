@@ -8,6 +8,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/mailru/easyjson"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
@@ -16,12 +20,9 @@ import (
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/usecase"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/google/uuid"
 )
 
-var noPerm error = &customerror.NoPermissionError{User: "Alice", Area: "секретная зона"}
+var noPerm *customerror.NoPermissionError = &customerror.NoPermissionError{User: "Alice", Area: "секретная зона"}
 
 type MessageController struct {
 	usecase usecase.MessageUsecase
@@ -51,11 +52,14 @@ var requestMessageDuration = prometheus.NewHistogramVec(
 // @Tags message
 // @Accept json
 // @Param chatId path string true "Chat ID (UUID)" minlength(36) maxlength(36) example("123e4567-e89b-12d3-a456-426614174000")
-// @Param message body models.MessageInput true "Message info"
-// @Success 201 "Сообщение успешно добавлено"
+// @Param text formData string true "Message info"
+// @Param sticker formData string false "sticker url"
+// @Param files formData file false "files array"
+// @Param photos formData file false "photos array"
+// @Success 201 {object} responser.SuccessResponse "Сообщение успешно добавлено"
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось добавить сообщение"
-// @Router /chat/{chatId}/messages [post]
+// @Router /chat/{chatId}/messages [post].
 func (h *MessageController) AddNewMessage(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -73,9 +77,8 @@ func (h *MessageController) AddNewMessage(w http.ResponseWriter, r *http.Request
 
 	chatId := mapVars["chatId"]
 	chatUUID, err := uuid.Parse(chatId)
-
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Println("Delivery: error during parsing json:", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Delivery: error during connection upgrade:%v", err), http.StatusBadRequest)
 		return
@@ -92,35 +95,81 @@ func (h *MessageController) AddNewMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var messageDTO models.Message
-	err = json.NewDecoder(r.Body).Decode(&messageDTO)
-
-	if err != nil {
-		log.Printf("Не удалось распарсить Json: %v", err)
-		responser.SendError(ctx, w, fmt.Sprintf("Не удалось распарсить Json: %v", err), http.StatusBadRequest)
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		log.Errorf("не удалось распарсить запрос: %v", err)
+		responser.SendError(ctx, w, "Unable to parse form", http.StatusBadRequest)
 		return
 	}
 
-	err = h.usecase.SendMessage(r.Context(), user, chatUUID, messageDTO)
+	var messageDTO models.Message
+	jsonString := r.FormValue("sticker")
+	if jsonString != "" {
+		if err := json.Unmarshal([]byte(jsonString), &messageDTO.Sticker); err != nil {
+			log.Errorf("не удалось распарсить text: %v", err)
+			responser.SendError(ctx, w, "bad request", http.StatusBadRequest)
+			return
+		}
+	}
 
+	if messageDTO.Sticker == "" {
+		jsonString = r.FormValue("text")
+		if jsonString != "" {
+			if err := json.Unmarshal([]byte(jsonString), &messageDTO.Message); err != nil {
+				log.Errorf("не удалось распарсить text: %v", err)
+				responser.SendError(ctx, w, "bad request", http.StatusBadRequest)
+				return
+			}
+		}
+
+		files := r.MultipartForm.File["files"]
+
+		for _, header := range files {
+			file, err := header.Open()
+			if err != nil {
+				responser.SendError(ctx, w, "Failed to open files", http.StatusBadRequest)
+				return
+			}
+			defer file.Close()
+
+			messageDTO.Files = append(messageDTO.Files, file)
+			messageDTO.FilesHeaders = append(messageDTO.FilesHeaders, header)
+		}
+
+		photos := r.MultipartForm.File["photos"]
+
+		for _, header := range photos {
+			photo, err := header.Open()
+			if err != nil {
+				responser.SendError(ctx, w, "Failed to open files", http.StatusBadRequest)
+				return
+			}
+			defer photo.Close()
+
+			messageDTO.Photos = append(messageDTO.Photos, photo)
+			messageDTO.PhotosHeaders = append(messageDTO.PhotosHeaders, header)
+		}
+	}
+
+	err = h.usecase.SendMessage(r.Context(), user, chatUUID, messageDTO)
 	if err != nil {
 		log.Printf("Не удалось добавить сообщение: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Не удалось добавить сообщение: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	// w.WriteHeader(http.StatusCreated)
+	responser.SendOK(w, "message created", http.StatusCreated)
 }
 
 // DeleteMessage godoc
 // @Summary Delete message
 // @Tags message
 // @Param messageId path string true "messageId ID (UUID)" minlength(36) maxlength(36) example("123e4567-e89b-12d3-a456-426614174000")
-// @Success 200 "Сообщение успешно удалено"
+// @Success 200 {object} responser.SuccessResponse "Сообщение успешно удалено"
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 403	{object} customerror.NoPermissionError "Нет доступа"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось удалить сообщение"
-// @Router /messages/{messageId} [delete]
+// @Router /messages/{messageId} [delete].
 func (h *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -140,7 +189,7 @@ func (h *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request
 	log.Printf("messageId: %s", chatId)
 	messageUUID, err := uuid.Parse(chatId)
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("Получен кривой Id сообщения %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Получен кривой Id сообщения %v", err), http.StatusBadRequest)
 		return
@@ -152,7 +201,6 @@ func (h *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	err = h.usecase.DeleteMessage(ctx, user, messageUUID)
-
 	if err != nil {
 		if errors.As(err, &noPerm) {
 			responser.SendError(ctx, w, fmt.Sprintf("Нет доступа: %v", err), http.StatusForbidden)
@@ -169,11 +217,11 @@ func (h *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request
 // @Tags message
 // @Param message body models.MessageInput true "Message info"
 // @Param messageId path string true "messageId ID (UUID)" minlength(36) maxlength(36) example("123e4567-e89b-12d3-a456-426614174000")
-// @Success 200 "Сообщение успешно изменено"
+// @Success 200 {object} responser.SuccessResponse "Сообщение успешно изменено"
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 403	{object} customerror.NoPermissionError "Нет доступа"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось обновить сообщение"
-// @Router /messages/{messageId} [put]
+// @Router /messages/{messageId} [put].
 func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -193,7 +241,7 @@ func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request
 	log.Printf("messageId: %s", messageId)
 	messageUUID, err := uuid.Parse(messageId)
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("Получен кривой Id сообщения %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Получен кривой Id сообщения %v", err), http.StatusBadRequest)
 		return
@@ -206,8 +254,7 @@ func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request
 	}
 
 	var messageDTO models.Message
-	err = json.NewDecoder(r.Body).Decode(&messageDTO)
-
+	err = easyjson.UnmarshalFromReader(r.Body, &messageDTO)
 	if err != nil {
 		log.Printf("Не удалось распарсить Json: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Не удалось распарсить Json: %v", err), http.StatusBadRequest)
@@ -215,7 +262,6 @@ func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request
 	}
 
 	err = h.usecase.UpdateMessage(ctx, user, messageUUID, messageDTO)
-
 	if err != nil {
 		if errors.As(err, &noPerm) {
 			responser.SendError(ctx, w, fmt.Sprintf("Нет доступа: %v", err), http.StatusForbidden)
@@ -227,7 +273,6 @@ func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request
 	responser.SendOK(w, "Сообщение обновлено", http.StatusOK)
 }
 
-
 // GetAllMessages godoc
 // @Summary Get All messages
 // @Tags message
@@ -236,7 +281,7 @@ func (h *MessageController) UpdateMessage(w http.ResponseWriter, r *http.Request
 // @Success 200 {object} models.MessagesArrayDTO "Сообщение успешно отаправлены"
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось получить сообщениея"
-// @Router /chat/{chatId}/messages [get]
+// @Router /chat/{chatId}/messages [get].
 func (h *MessageController) GetAllMessages(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -255,9 +300,8 @@ func (h *MessageController) GetAllMessages(w http.ResponseWriter, r *http.Reques
 	chatId := mapVars["chatId"]
 	log.Printf("chatid: %s", chatId)
 	chatUUID, err := uuid.Parse(chatId)
-
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("Получен кривой Id юзера: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Получен кривой Id юзера: %v", err), http.StatusBadRequest)
 		return
@@ -279,18 +323,9 @@ func (h *MessageController) GetAllMessages(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	jsonResp, err := json.Marshal(messages)
-
-	if err != nil {
-		log.Printf("error happened in JSON marshal. Err: %s", err)
-		responser.SendError(ctx, w, fmt.Sprintf("error happened in JSON marshal. Err: %s", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	jsonResp, err := easyjson.Marshal(messages)
+	responser.SendJson(ctx, w, jsonResp, err, http.StatusOK)
 }
-
 
 // GetMessagesWithPage godoc
 // @Summary получить 25 сообщений до определенного
@@ -301,7 +336,7 @@ func (h *MessageController) GetAllMessages(w http.ResponseWriter, r *http.Reques
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 403	{object} customerror.NoPermissionError "Нет доступа"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось получить сообщениея"
-// @Router /chat/{chatId}/messages/pages/{lastMessageId} [get]
+// @Router /chat/{chatId}/messages/pages/{lastMessageId} [get].
 func (h *MessageController) GetMessagesWithPage(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -323,7 +358,7 @@ func (h *MessageController) GetMessagesWithPage(w http.ResponseWriter, r *http.R
 
 	chatUUID, err := uuid.Parse(chatId)
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("получен кривой Id юзера: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Delivery: error during parsing uuid:%v", err), http.StatusBadRequest)
 		return
@@ -331,7 +366,7 @@ func (h *MessageController) GetMessagesWithPage(w http.ResponseWriter, r *http.R
 
 	lastMessageUUID, err := uuid.Parse(lastMessageId)
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("получен кривой Id сообщения: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Delivery: error during parsing uuid:%v", err), http.StatusBadRequest)
 		return
@@ -355,7 +390,9 @@ func (h *MessageController) GetMessagesWithPage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	responser.SendStruct(ctx, w, messages, http.StatusOK)
+	// responser.SendStruct(ctx, w, messages, http.StatusOK)
+	jsonResp, err := easyjson.Marshal(messages)
+	responser.SendJson(ctx, w, jsonResp, err, http.StatusOK)
 }
 
 // SearchMessages godoc
@@ -367,7 +404,7 @@ func (h *MessageController) GetMessagesWithPage(w http.ResponseWriter, r *http.R
 // @Failure 400	{object} responser.ErrorResponse "Некорректный запрос"
 // @Failure 403	{object} customerror.NoPermissionError "Нет доступа"
 // @Failure 500	{object} responser.ErrorResponse "Не удалось получить сообщениея"
-// @Router /chat/{chatId}/messages/search [get]
+// @Router /chat/{chatId}/messages/search [get].
 func (h *MessageController) SearchMessages(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -386,7 +423,7 @@ func (h *MessageController) SearchMessages(w http.ResponseWriter, r *http.Reques
 	chatId := mapVars["chatId"]
 	chatUUID, err := uuid.Parse(chatId)
 	if err != nil {
-		//conn.400
+		// conn.400
 		log.Printf("получен кривой Id юзера: %v", err)
 		responser.SendError(ctx, w, fmt.Sprintf("Delivery: error during parsing uuid:%v", err), http.StatusBadRequest)
 		return
@@ -408,7 +445,6 @@ func (h *MessageController) SearchMessages(w http.ResponseWriter, r *http.Reques
 	}
 
 	messages, err := h.usecase.SearchMessagesWithQuery(ctx, user, chatUUID, query)
-
 	if err != nil {
 		if errors.As(err, &noPerm) {
 			responser.SendError(ctx, w, fmt.Sprintf("Нет доступа: %v", err), http.StatusForbidden)
@@ -417,5 +453,7 @@ func (h *MessageController) SearchMessages(w http.ResponseWriter, r *http.Reques
 		responser.SendError(ctx, w, fmt.Sprintf("внутренняя ошибка: %v", err), http.StatusInternalServerError)
 		return
 	}
-	responser.SendStruct(ctx, w, messages, http.StatusOK)
+	// responser.SendStruct(ctx, w, messages, http.StatusOK)
+	jsonResp, err := easyjson.Marshal(messages)
+	responser.SendJson(ctx, w, jsonResp, err, http.StatusOK)
 }

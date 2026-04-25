@@ -4,9 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"sort"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	amqp "github.com/rabbitmq/amqp091-go"
+	"golang.org/x/net/html"
+	errGroup "golang.org/x/sync/errgroup"
 
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
@@ -16,15 +24,8 @@ import (
 	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
 	chatlist "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository"
 	messageModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
-	message "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/repository"
-	multipartHepler "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/multipartHelper"
+	message "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/usecase"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"golang.org/x/net/html"
-	errGroup "golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -37,14 +38,13 @@ const (
 	Owner     = "owner"
 	NotInChat = ""
 )
+
 const (
 	personal = "personal"
 	channel  = "channel"
 )
 
-const chatDir = "chat"
-
-// ивенты для сокета
+// ивенты для сокета.
 const (
 	UpdateChat          = "updateChat"
 	DeleteChat          = "deleteChat"
@@ -54,13 +54,21 @@ const (
 )
 
 type ChatUsecaseImpl struct {
-	messageRepository message.MessageRepository
-	repository        chatlist.ChatRepository
-	chatQuery         string
-	ch                *amqp.Channel
+	fileUC         FilesUsecase
+	messageUsecase message.MessageUsecase
+	repository     chatlist.ChatRepository
+	chatQuery      string
+	ch             *amqp.Channel
 }
 
-func NewChatUsecase(repository chatlist.ChatRepository, messageRepository message.MessageRepository, ch *amqp.Channel) ChatUsecase {
+type FilesUsecase interface {
+	RewritePhoto(ctx context.Context, file multipart.File, header multipart.FileHeader, fileIDStr string) error
+	DeletePhoto(ctx context.Context, fileIDStr string) error
+	IsImage(header multipart.FileHeader) error
+	SaveAvatar(ctx context.Context, file multipart.File, header *multipart.FileHeader) (string, error)
+}
+
+func NewChatUsecase(fileUC FilesUsecase, repository chatlist.ChatRepository, messageRepository message.MessageUsecase, ch *amqp.Channel) ChatUsecase {
 	// объявляем очередь для яатов
 	q, err := ch.QueueDeclare(
 		"chat", // name
@@ -76,16 +84,17 @@ func NewChatUsecase(repository chatlist.ChatRepository, messageRepository messag
 	}
 
 	return &ChatUsecaseImpl{
-		repository:        repository,
-		messageRepository: messageRepository,
-		chatQuery:         q.Name,
-		ch:                ch,
+		fileUC:         fileUC,
+		messageUsecase: messageRepository,
+		repository:     repository,
+		chatQuery:      q.Name,
+		ch:             ch,
 	}
 }
 
 func (s *ChatUsecaseImpl) createChatDTO(ctx context.Context, chat chatModel.Chat) (chatModel.ChatDTOOutput, error) {
 	log := logger.LoggerWithCtx(ctx, logger.Log)
-	message, err := s.messageRepository.GetLastMessage(chat.ChatId)
+	message, err := s.messageUsecase.GetLastMessage(chat.ChatId)
 	if err != nil {
 		log.Printf("Usecase: не удалось получить последнее сообщение: %v", err)
 		return chatModel.ChatDTOOutput{}, err
@@ -94,14 +103,13 @@ func (s *ChatUsecaseImpl) createChatDTO(ctx context.Context, chat chatModel.Chat
 
 	log.Printf("Chat usecase: установка количества участников чата: %v", chat.ChatId)
 	countOfUsers, err := s.repository.GetCountOfUsersInChat(ctx, chat.ChatId)
-
 	if err != nil {
 		log.Printf("Usecase: не удалось получить количество пользователей: %v", err)
 		return chatModel.ChatDTOOutput{}, err
 	}
 	log.Println("Usecase: количество пользователей получено")
 
-	return chatModel.СhatToChatDTO(chat,
+	return chatModel.ChatToChatDTO(chat,
 		countOfUsers,
 		message), nil
 }
@@ -126,7 +134,6 @@ func (s *ChatUsecaseImpl) GetChats(ctx context.Context, cookie []*http.Cookie) (
 	for _, chat := range chats {
 		if chat.ChatType == personal {
 			chat.ChatName, chat.AvatarURL, err = s.getAvatarAndNameForPersonalChat(ctx, user.ID, chat.ChatId)
-
 			if err != nil {
 				log.Errorf("Chat usecase -> GetChats: не удалось обработать персональный чат: %v", err)
 				return nil, err
@@ -134,7 +141,6 @@ func (s *ChatUsecaseImpl) GetChats(ctx context.Context, cookie []*http.Cookie) (
 		}
 
 		chatDTO, err := s.createChatDTO(ctx, chat)
-
 		if err != nil {
 			log.Printf("Chat usecase -> GetChats: не удалось создать DTO: %v", err)
 			return nil, err
@@ -193,8 +199,10 @@ func (s *ChatUsecaseImpl) AddUsersIntoChatWithCheckPermission(ctx context.Contex
 	case Admin, Owner, None:
 		addedUsers, notAddedUsers = s.addUsersIntoChat(ctx, userIds, chatId)
 		s.sendIvent(ctx, AddNewUsersInChat, chatId, addedUsers)
-		return chatModel.AddedUsersIntoChatDTO{AddedUsers: addedUsers,
-			NotAddedUsers: notAddedUsers}, nil
+		return chatModel.AddedUsersIntoChatDTO{
+			AddedUsers:    addedUsers,
+			NotAddedUsers: notAddedUsers,
+		}, nil
 	default:
 		return chatModel.AddedUsersIntoChatDTO{}, &customerror.NoPermissionError{
 			User: user.ID.String(),
@@ -227,7 +235,7 @@ func (s *ChatUsecaseImpl) AddNewChat(ctx context.Context, cookie []*http.Cookie,
 	}
 
 	if chat.Avatar != nil {
-		filename, err := multipartHepler.SavePhoto(*chat.Avatar, chatDir)
+		filename, err := s.fileUC.SaveAvatar(ctx, *chat.Avatar, chat.AvatarHeader)
 		if err != nil {
 			log.Printf("Не удалось записать аватарку: %v", err)
 			return chatModel.ChatDTOOutput{}, err
@@ -248,7 +256,6 @@ func (s *ChatUsecaseImpl) AddNewChat(ctx context.Context, cookie []*http.Cookie,
 
 	// добавление владельца
 	err = s.repository.AddUserIntoChat(ctx, user.ID, chatId, Owner)
-
 	if err != nil {
 		log.Printf("Не удалось добавить владельца в чат: %v", err)
 		return chatModel.ChatDTOOutput{}, err
@@ -265,16 +272,39 @@ func (s *ChatUsecaseImpl) AddNewChat(ctx context.Context, cookie []*http.Cookie,
 
 	if newChatDTO.ChatType == personal {
 		newChatDTO.ChatName, newChatDTO.AvatarPath, err = s.getAvatarAndNameForPersonalChat(ctx, user.ID, newChat.ChatId)
-
 		if err != nil {
 			log.Errorf("Chat usecase -> AddNewChat: не удалось обработать персональный чат: %v", err)
 			return chatModel.ChatDTOOutput{}, err
 		}
 	}
-	// отправляем уведомление
+
+	// отправляем уведомлениея
 	s.sendIvent(ctx, NewChat, chatId, nil)
+
+	createChatMessage := "Группа создана."
+	switch chat.ChatType {
+	case channel:
+		createChatMessage = "Канал создан."
+	case personal:
+		createChatMessage = "Личный чат создан."
+	}
+
+	newChatDTO.LastMessage = s.sendInformationalMessage(ctx, user.ID, chatId, createChatMessage)
 	metric.IncMetric(*addNewChatMetric)
 	return newChatDTO, nil
+}
+
+func (s *ChatUsecaseImpl) sendInformationalMessage(ctx context.Context, userID uuid.UUID, chatId uuid.UUID, event string) messageModel.Message {
+	message := messageModel.Message{
+		MessageId:   uuid.New(),
+		AuthorID:    userID, // При выдаче, если информационное, будет меняться uuid юзера на нули.
+		Message:     event,
+		SentAt:      time.Now(),
+		MessageType: "informational",
+	}
+	s.messageUsecase.SendInformationalMessage(ctx, message, chatId)
+	message.AuthorID, _ = uuid.Parse("00000000-0000-0000-0000-000000000000") // Для информационных сообщений ставим нули в автора.
+	return message
 }
 
 func (s *ChatUsecaseImpl) getAvatarAndNameForPersonalChat(ctx context.Context, userID uuid.UUID, chatId uuid.UUID) (string, string, error) {
@@ -287,7 +317,6 @@ func (s *ChatUsecaseImpl) getAvatarAndNameForPersonalChat(ctx context.Context, u
 		if u.ID != userID {
 			// находим имя пользователя и аватар
 			chatName, avatar, err := s.repository.GetNameAndAvatar(ctx, u.ID)
-
 			if err != nil {
 				log.Printf("Chat usecase -> GetChats: не удалось получить аватар и имя: %v", err)
 				return "", "", err
@@ -303,6 +332,26 @@ func (s *ChatUsecaseImpl) DeleteChat(ctx context.Context, chatId uuid.UUID, user
 	role, err := s.repository.GetUserRoleInChat(ctx, userId, chatId)
 	if err != nil {
 		return err
+	}
+
+	chatType, err := s.repository.GetChatType(ctx, chatId)
+	if err != nil {
+		return err
+	}
+
+	if chatType == personal {
+		log.Printf("Chat usecase -> DeleteChat: удаление чата %v", chatId)
+
+		// send notification to chat
+
+		err = s.repository.DeleteChat(ctx, chatId)
+		if err != nil {
+			log.Printf("Chat usecase -> DeleteChat: не удалось удалить чат: %v", err)
+			return err
+		}
+
+		s.sendIvent(ctx, DeleteChat, chatId, nil)
+		return nil
 	}
 
 	// проверяем есть ли права
@@ -372,8 +421,7 @@ func (s *ChatUsecaseImpl) UpdateChat(ctx context.Context, chatId uuid.UUID, chat
 			}
 
 			if chat.AvatarURL != "" {
-
-				err = multipartHepler.RewritePhoto(*chatUpdate.Avatar, chat.AvatarURL)
+				err = s.fileUC.RewritePhoto(ctx, *chatUpdate.Avatar, *chatUpdate.AvatarHeader, chat.AvatarURL)
 				if err != nil {
 					log.Errorf("не удалось обновить аватарку: %v", err)
 					return chatModel.ChatUpdateOutput{}, err
@@ -381,13 +429,12 @@ func (s *ChatUsecaseImpl) UpdateChat(ctx context.Context, chatId uuid.UUID, chat
 				updatedChat.Avatar = chat.AvatarURL
 			} else {
 				log.Println("нет старой аватарки -> установка новой")
-				filename, err := multipartHepler.SavePhoto(*chatUpdate.Avatar, chatDir)
+				filename, err := s.fileUC.SaveAvatar(ctx, *chatUpdate.Avatar, chatUpdate.AvatarHeader)
 				if err != nil {
 					log.Errorf("Не удалось записать аватарку: %v", err)
 					return chatModel.ChatUpdateOutput{}, err
 				}
 				err = s.repository.UpdateChatPhoto(ctx, chatId, filename)
-
 				if err != nil {
 					log.Errorf("не удалось установить аватарку: %v", err)
 					return chatModel.ChatUpdateOutput{}, err
@@ -395,7 +442,6 @@ func (s *ChatUsecaseImpl) UpdateChat(ctx context.Context, chatId uuid.UUID, chat
 				updatedChat.Avatar = filename
 			}
 			log.Println("аватар обновлен")
-
 		}
 
 		if chatUpdate.ChatName != "" {
@@ -458,11 +504,11 @@ func (s *ChatUsecaseImpl) DeleteUsersFromChat(ctx context.Context, userID uuid.U
 		return chatModel.DeletdeUsersFromChatDTO{DeletedUsers: deletedIds}, nil
 
 	default:
-		return chatModel.DeletdeUsersFromChatDTO{}, errors.New("Участники не удалены")
+		return chatModel.DeletdeUsersFromChatDTO{}, errors.New("участники не удалены")
 	}
 }
 
-// UserLeaveChat удаляет владельца обращения из чата
+// UserLeaveChat удаляет владельца обращения из чата.
 func (s *ChatUsecaseImpl) UserLeaveChat(ctx context.Context, userId uuid.UUID, chatId uuid.UUID) error {
 	log := logger.LoggerWithCtx(ctx, logger.Log)
 	role, err := s.repository.GetUserRoleInChat(ctx, userId, chatId)
@@ -512,6 +558,8 @@ func (s *ChatUsecaseImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID, use
 	var users []chatModel.UserInChatDAO
 	var usersDTO []chatModel.UserInChatDTO
 	var messages []messageModel.Message
+	var files []messageModel.Payload
+	var photos []messageModel.Payload
 
 	g.Go(func() error {
 		users, err = s.repository.GetUsersFromChat(ctx, chatId)
@@ -524,7 +572,13 @@ func (s *ChatUsecaseImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID, use
 	})
 
 	g.Go(func() error {
-		messages, err = s.messageRepository.GetFirstMessages(ctx, chatId)
+		messagesDTO, err := s.messageUsecase.GetFirstMessages(ctx, chatId)
+		messages = messagesDTO.Messages
+		return err
+	})
+
+	g.Go(func() error {
+		files, photos, err = s.messageUsecase.GetPayload(ctx, chatId)
 		return err
 	})
 
@@ -532,10 +586,15 @@ func (s *ChatUsecaseImpl) GetChatInfo(ctx context.Context, chatId uuid.UUID, use
 		return chatModel.ChatInfoDTO{}, err
 	}
 
+	sendNotifications, err := s.repository.GetSendNotificationsForUser(ctx, chatId, userId)
+
 	return chatModel.ChatInfoDTO{
-		Role:     role,
-		Users:    usersDTO,
-		Messages: messages,
+		Role:              role,
+		Users:             usersDTO,
+		Messages:          messages,
+		SendNotifications: sendNotifications,
+		Files:             files,
+		Photos:            photos,
 	}, nil
 }
 
@@ -589,7 +648,6 @@ func (s *ChatUsecaseImpl) SearchChats(ctx context.Context, userID uuid.UUID, key
 		for _, chat := range userChats {
 			if chat.ChatType == personal {
 				chat.ChatName, chat.AvatarURL, err = s.getAvatarAndNameForPersonalChat(ctx, userID, chat.ChatId)
-
 				if err != nil {
 					log.Errorf("не удалось обработать персональный чат: %v", err)
 					return err
@@ -597,7 +655,6 @@ func (s *ChatUsecaseImpl) SearchChats(ctx context.Context, userID uuid.UUID, key
 			}
 
 			chatDTO, err := s.createChatDTO(ctx, chat)
-
 			if err != nil {
 				log.Errorf("не удалось создать DTO: %v", err)
 				return err
@@ -619,7 +676,6 @@ func (s *ChatUsecaseImpl) SearchChats(ctx context.Context, userID uuid.UUID, key
 
 		for _, chat := range globalChannels {
 			channelDTO, err := s.createChatDTO(ctx, chat)
-
 			if err != nil {
 				log.Errorf("не удалось создать DTO: %v", err)
 				return err
@@ -658,7 +714,7 @@ func (s *ChatUsecaseImpl) JoinChannel(ctx context.Context, userId uuid.UUID, cha
 	_, notAdded := s.addUsersIntoChat(ctx, []uuid.UUID{userId}, channelId)
 	if len(notAdded) != 0 {
 		log.Errorf("Пользователю %v не удалось вступить в канал %v", userId, channelId)
-		return errors.New("Не удалось добавить пользователя в чат")
+		return errors.New("не удалось добавить пользователя в чат")
 	}
 	return nil
 }
@@ -765,4 +821,24 @@ func (s *ChatUsecaseImpl) GetUsersFromChat(ctx context.Context, chatId string) (
 		userIds = append(userIds, user.ID.String())
 	}
 	return userIds, nil
+}
+
+// SetChatNotofications позволяет включить или выключить уведомления.
+func (s *ChatUsecaseImpl) SetChatNotofications(ctx context.Context, chatUUID uuid.UUID, userId uuid.UUID, value bool) error {
+	log := logger.LoggerWithCtx(ctx, logger.Log)
+	role, err := s.repository.GetUserRoleInChat(ctx, userId, chatUUID)
+	if err != nil {
+		return err
+	}
+	if role == NotInChat {
+		log.Printf("Пользователь %v не состоит в чате %v", userId, chatUUID)
+		return &customerror.NoPermissionError{
+			User: userId.String(),
+			Area: fmt.Sprintf("Пользователь %v не состоит в чате %v", userId, chatUUID),
+		}
+	}
+
+	err = s.repository.SetChatNotofications(ctx, chatUUID, userId, value)
+
+	return err
 }

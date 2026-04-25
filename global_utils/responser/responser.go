@@ -11,27 +11,31 @@ import (
 )
 
 const (
-	InvalidJSONError  = "Invalid format JSON"
-	ResponseError     = "Failed to create response"
-	UserNotFoundError = "User not found"
+	InvalidJSONError  = "invalid format JSON"
+	ResponseError     = "failed to create response"
+	UserNotFoundError = "user not found"
 )
 
-// @Schema
+// @Schema.
 type SuccessResponse struct {
 	Message string `json:"message" example:"success message"`
 }
 
-// @Schema
+// @Schema.
 type ErrorResponse struct {
 	Error  string `json:"error" example:"error message"`
 	Status string `json:"status" example:"error"`
 }
 
 func SendOK(w http.ResponseWriter, message string, statusCode int) {
+	log := logger.LoggerWithCtx(context.Background(), logger.Log)
 	response := SuccessResponse{Message: message}
 	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Errorf("Чет пошло не так: %v", err)
+	}
 }
 
 func SendError(ctx context.Context, w http.ResponseWriter, errorMessage string, statusCode int) {
@@ -41,7 +45,10 @@ func SendError(ctx context.Context, w http.ResponseWriter, errorMessage string, 
 	response := ErrorResponse{Error: errorMessage, Status: "error"}
 	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Errorf("Чет пошло не так: %v", err)
+	}
 
 	pc, _, _, _ := runtime.Caller(1)
 	funcPath := runtime.FuncForPC(pc).Name()
@@ -50,21 +57,41 @@ func SendError(ctx context.Context, w http.ResponseWriter, errorMessage string, 
 }
 
 func MethodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+
 	statusCode := http.StatusUnauthorized
 	errorMessage := "Method not allowed"
 
 	response := ErrorResponse{Error: errorMessage, Status: "error"}
 	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Errorf("Чет пошло не так: %v", err)
+	}
 
-	log := logger.LoggerWithCtx(context.Background(), logger.Log)
 	log.Errorf("Отправлен код %d. ОШИБКА: %s", statusCode, errorMessage)
 }
 
 // SendStruct отправляет полученный экземпляр структуры в формате json с статусом кода statusCode.
-func SendStruct(ctx context.Context, w http.ResponseWriter, response any, statusCode int) {
+func SendStruct(ctx context.Context, w http.ResponseWriter, response interface{}, statusCode int) {
 	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		SendError(ctx, w, "Failed to create response", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_, err = w.Write(jsonResp)
+	if err != nil {
+		SendError(ctx, w, "Failed to create response", http.StatusBadRequest)
+		return
+	}
+}
+
+// SendStruct отправляет полученный экземпляр структуры в формате json с статусом кода statusCode.
+func SendJson(ctx context.Context, w http.ResponseWriter, jsonResp []byte, err error, statusCode int) {
 	if err != nil {
 		SendError(ctx, w, "Failed to create response", http.StatusBadRequest)
 		return

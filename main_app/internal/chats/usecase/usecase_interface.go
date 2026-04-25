@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
 	"github.com/google/uuid"
+
+	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
 )
 
 //go:generate mockgen -source=usecase_interface.go -destination=mocks/mocks.go
@@ -23,7 +24,7 @@ type ChatUsecase interface {
 	DeleteUsersFromChat(ctx context.Context, userID uuid.UUID, chatId uuid.UUID, usertToDelete chatModel.DeleteUsersFromChatDTO) (chatModel.DeletdeUsersFromChatDTO, error)
 
 	JoinChannel(ctx context.Context, userId uuid.UUID, channelId uuid.UUID) error
-	
+
 	// UserLeaveChat удаляет владельца обращения из чата
 	UserLeaveChat(ctx context.Context, userId uuid.UUID, chatId uuid.UUID) error
 
@@ -36,4 +37,7 @@ type ChatUsecase interface {
 	// grpc
 	GetUserChats(ctx context.Context, userId string) (chatIds []string, err error)
 	GetUsersFromChat(ctx context.Context, chatId string) (userIds []string, err error)
+
+	// SetChatNotofications позволяет включить или выключить уведомления.
+	SetChatNotofications(ctx context.Context, chatUUID uuid.UUID, userId uuid.UUID, value bool) error
 }

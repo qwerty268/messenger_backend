@@ -1,23 +1,26 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
 	authDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/middleware"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/delivery"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/usecase"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/gorilla/mux"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-const host = "patefon"
-const port = 8082
+const (
+	host = "main-app"
+	port = 8082
+)
 
 func main() {
 	// подключаем rebbit mq
@@ -29,24 +32,19 @@ func main() {
 		_ = conn.Close() // Закрываем подключение в случае удачной попытки
 	}()
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("failed to open channel. Error: %s", err)
-	}
-	defer func() {
-		_ = ch.Close() // Закрываем канал в случае удачной попытки открытия
-	}()
 	log.Println("rebbit mq подключен")
 
-	socketUsecase := usecase.NewWebsocketUsecase(ch, host, port)
+	socketUsecase := usecase.NewWebsocketUsecase(conn, host, port)
 	socketDelivery := delivery.NewWebsocket(*socketUsecase)
 
 	router := mux.NewRouter()
 
+	router = router.PathPrefix("/api/").Subrouter()
+
 	// auth
 
 	grpcConnAuth, err := grpc.Dial(
-		"auth:8081",
+		"auth-service:8081",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -58,6 +56,12 @@ func main() {
 	auth := authDelivery.New(authClient)
 
 	// ручки
+	tmpl := template.Must(template.ParseFiles("index.html"))
+
+	router.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
+		tmpl.Execute(w, nil)
+	})
+
 	router.HandleFunc("/startwebsocket", auth.Authorize(socketDelivery.HandleConnection))
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())

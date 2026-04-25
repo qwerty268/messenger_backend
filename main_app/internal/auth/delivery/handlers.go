@@ -2,13 +2,18 @@ package delivery
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"html"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/mailru/easyjson"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.octolab.org/pointer"
 
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
@@ -17,10 +22,6 @@ import (
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
 	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.octolab.org/pointer"
 )
 
 //go:generate mockgen -source=handlers.go -destination=mocks/mocks.go
@@ -59,7 +60,7 @@ var requestAuthDuration = prometheus.NewHistogramVec(
 // @Success 201 {object} responser.SuccessResponse "Authentication successful"
 // @Failure 400 {object} responser.ErrorResponse "Invalid format JSON"
 // @Failure 401 {object} responser.ErrorResponse "Incorrect login or password"
-// @Router /login [post]
+// @Router /login [post].
 func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -73,7 +74,7 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("пришел запрос на аутентификацию")
 
 	var creds models.AuthReqDTO
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &creds); err != nil {
 		log.Errorf("не удалось распарсить json")
 		responser.SendError(ctx, w, "Invalid format JSON", http.StatusBadRequest)
 		return
@@ -91,10 +92,10 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Username: creds.Username,
 			Password: creds.Password,
 		})
-
 	if err != nil {
 		log.Errorf("не удалось аутентифицировать пользователя")
 		responser.SendError(ctx, w, "Invalid format JSON", http.StatusUnauthorized)
+		return
 	}
 
 	if grpcResp.GetIsAuthenticated() {
@@ -108,7 +109,6 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("пользователь успешно аутентифицирован")
 
 		responser.SendOK(w, "Authentication successful", http.StatusCreated)
-
 	} else {
 		log.Errorf("неверный логин или пароль")
 		responser.SendError(ctx, w, "Incorrect login or password", http.StatusUnauthorized)
@@ -125,7 +125,7 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} responser.ErrorResponse "Invalid input data"
 // @Failure 409 {object} responser.ErrorResponse "A user with that username already exists"
 // @Failure 400 {object} responser.ErrorResponse "User failed to create"
-// @Router /signup [post]
+// @Router /signup [post].
 func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -141,7 +141,7 @@ func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("пришел запрос на регистрацию")
 
 	var creds models.RegisterReqDTO
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &creds); err != nil {
 		responser.SendError(ctx, w, "Invalid input data", http.StatusBadRequest)
 		return
 	}
@@ -156,10 +156,9 @@ func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		&authv1.RegistrationRequest{
 			Username: creds.Username,
-			Name:     creds.Username,
+			Name:     creds.Name,
 			Password: creds.Password,
 		})
-
 	if err != nil {
 		responser.SendError(ctx, w, "A user with that username already exists", http.StatusConflict)
 		return
@@ -169,7 +168,6 @@ func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	d.setTokens(w, r, creds.Username)
 	userData, err := d.client.GetUserDataByUsername(ctx, &authv1.GetUserDataByUsernameRequest{Username: creds.Username})
-
 	if err != nil {
 		responser.SendError(ctx, w, "User failed to create", http.StatusBadRequest)
 		return
@@ -192,7 +190,9 @@ func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("пользователь успешно зарегистрирован")
 
-	responser.SendStruct(ctx, w, response, http.StatusCreated)
+	// responser.SendStruct(ctx, w, response, http.StatusCreated)
+	jsonResp, err := easyjson.Marshal(response)
+	responser.SendJson(ctx, w, jsonResp, err, http.StatusCreated)
 }
 
 // AuthHandler godoc
@@ -203,7 +203,7 @@ func (d *Delivery) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {object} models.UserDataRespDTO "User data retrieved successfully"
 // @Failure 401 {object} responser.ErrorResponse "Unauthorized: token is invalid"
-// @Router /auth [get]
+// @Router /auth [get].
 func (d *Delivery) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -243,7 +243,9 @@ func (d *Delivery) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("пользователь успешно авторизован")
 
-	responser.SendStruct(ctx, w, response, http.StatusOK)
+	// responser.SendStruct(ctx, w, response, http.StatusOK)
+	jsonResp, err := easyjson.Marshal(response)
+	responser.SendJson(ctx, w, jsonResp, err, http.StatusOK)
 }
 
 var errTokenExpired = errors.New("токен истек")
@@ -308,7 +310,7 @@ func (d *Delivery) Csrf(next http.HandlerFunc) http.HandlerFunc {
 // @Produce json
 // @Success 200 {object}  responser.SuccessResponse "Logout successful"
 // @Failure 401 {object} responser.ErrorResponse "No access token found"
-// @Router /logout [post]
+// @Router /logout [post].
 func (d *Delivery) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	start := time.Now()
@@ -339,8 +341,8 @@ func (d *Delivery) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    "t",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   -1,
 	})
 
@@ -361,8 +363,8 @@ func (d *Delivery) setTokens(w http.ResponseWriter, r *http.Request, username st
 		Value:    grcpResp.GetToken(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 
@@ -388,7 +390,6 @@ func (d *Delivery) parseCookies(cookies []*http.Cookie) (string, error) {
 }
 
 func convertUserDataToDTO(userData *authv1.GetUserDataByUsernameResponse) models.UserDataRespDTO {
-
 	return models.UserDataRespDTO{
 		ID:        uuid.MustParse(userData.GetID()),
 		Username:  html.EscapeString(userData.GetUsername()),
@@ -398,7 +399,6 @@ func convertUserDataToDTO(userData *authv1.GetUserDataByUsernameResponse) models
 }
 
 func convertFromGRPCUser(user *authv1.UserJWT) models.User {
-
 	return models.User{
 		ID:       uuid.MustParse(user.GetID()),
 		Username: user.GetUsername(),

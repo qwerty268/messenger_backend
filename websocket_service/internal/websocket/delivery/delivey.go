@@ -4,18 +4,18 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/middleware"
 	websocketUsecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/usecase"
-
-	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  5024,
-	WriteBufferSize: 5024,
+	ReadBufferSize:  1024,
+	WriteBufferSize: 10048,
 
 	CheckOrigin: func(r *http.Request) bool {
 		allowedOrigins := []string{
@@ -28,6 +28,15 @@ var upgrader = websocket.Upgrader{
 			"https://213.87.152.18:8001",
 			"http://212.233.98.59:8080",
 			"https://212.233.98.59:8080",
+			"https://patefon.site",
+			"http://localhost",
+			"https://localhost",
+			"https://localhost:8083",
+			"http://localhost:8083",
+			"http://localhost:9090",
+			"https://localhost:9090",
+			"http://127.0.0.1:9090",
+			"https://127.0.0.1:9090",
 		}
 
 		for _, origin := range allowedOrigins {
@@ -57,6 +66,7 @@ func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		responser.SendError(r.Context(), w, "Не переданы параметры", http.StatusInternalServerError)
 		return
 	}
+
 	log.Printf("Пользователь %v Открыл сокет", user.ID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -86,7 +96,7 @@ func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		case message := <-eventChannel:
 			// запись новых сообщений
 			log.Println("Message delivery websocket: получены новые сообщения")
-
+			log.Println(message.Event)
 			conn.WriteJSON(message.Event)
 
 		default:

@@ -3,21 +3,22 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	socketUsecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/events"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
 	jwt "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/prometheus/client_golang/prometheus"
-
 	customerror "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/custom_error"
 	chatRepository "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository"
+	filesModels "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/models"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/repository"
-
-	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Method = string
@@ -33,13 +34,19 @@ const (
 )
 
 type MessageUsecaseImplm struct {
+	fileUC            FilesUsecase
 	messageRepository repository.MessageRepository
 	chatRepository    chatRepository.ChatRepository
 	queryName         string
 	ch                *amqp.Channel
 }
 
-func NewMessageUsecaseImpl(messageRepository repository.MessageRepository, chatRepository chatRepository.ChatRepository, ch *amqp.Channel) MessageUsecase {
+type FilesUsecase interface {
+	SaveFile(ctx context.Context, file multipart.File, header *multipart.FileHeader, users []string) (filesModels.Payload, error)
+	SavePhoto(ctx context.Context, file multipart.File, header *multipart.FileHeader, users []string) (filesModels.Payload, error)
+}
+
+func NewMessageUsecaseImpl(fileUC FilesUsecase, messageRepository repository.MessageRepository, chatRepository chatRepository.ChatRepository, ch *amqp.Channel) MessageUsecase {
 	// объявляем очередь
 	q, err := ch.QueueDeclare(
 		"message", // name
@@ -55,6 +62,7 @@ func NewMessageUsecaseImpl(messageRepository repository.MessageRepository, chatR
 	}
 
 	usecase := MessageUsecaseImplm{
+		fileUC:            fileUC,
 		messageRepository: messageRepository,
 		chatRepository:    chatRepository,
 		queryName:         q.Name,
@@ -71,6 +79,8 @@ var sendedMessagesMetric = prometheus.NewGaugeVec(
 	nil, // no labels for this metric
 )
 
+const branchType = "branch"
+
 func (u *MessageUsecaseImplm) SendMessage(ctx context.Context, user jwt.User, chatId uuid.UUID, message models.Message) error {
 	log := logger.LoggerWithCtx(ctx, logger.Log)
 	log.Printf("Usecase: начато добавление сообщения в чат %v", chatId)
@@ -82,14 +92,74 @@ func (u *MessageUsecaseImplm) SendMessage(ctx context.Context, user jwt.User, ch
 
 	log.Printf("Usecase: сообщение от прользователя: %v", message.AuthorID)
 
-	err := u.messageRepository.AddMessage(message, chatId)
+	chatType, err := u.chatRepository.GetChatType(ctx, chatId)
+	if err != nil {
+		log.Errorf("Usecase: не удалось получить тип чата: %v", err)
+		return err
+	}
+
+	// Если есть файлы и сообщение не стикер.
+	if len(message.Files) > 0 || len(message.Photos) > 0 || message.Sticker == "" {
+		// Добавление тех, кому можно читать файл, если файл не в публичное место отправлен.
+		var userIDs []string
+		if chatType == "personal" || chatType == "group" {
+			users, err := u.chatRepository.GetUsersFromChat(ctx, chatId)
+			if err != nil {
+				log.Errorf("Usecase: не удалось получить пользователей чата: %v", err)
+				return err
+			}
+			for _, user := range users {
+				userIDs = append(userIDs, user.ID.String())
+			}
+		}
+
+		// Добавление файлов в mongoDB
+		for i := 0; i < len(message.Files); i++ {
+			file, err := u.fileUC.SaveFile(ctx, message.Files[i], message.FilesHeaders[i], userIDs)
+			if err != nil {
+				log.Errorf("Usecase: не удалось сохранить файл: %v", err)
+				return err
+			}
+			message.FilesDTO = append(message.FilesDTO, models.Payload{
+				URL:      file.URL,
+				Filename: file.Filename,
+				Size:     file.Size,
+			})
+		}
+
+		// Добавление фото в mongoDB
+		for i := 0; i < len(message.Photos); i++ {
+			photo, err := u.fileUC.SavePhoto(ctx, message.Photos[i], message.PhotosHeaders[i], userIDs)
+			if err != nil {
+				log.Errorf("Usecase: не удалось сохранить фото: %v", err)
+				return err
+			}
+			message.PhotosDTO = append(message.PhotosDTO, models.Payload{
+				URL:      photo.URL,
+				Filename: photo.Filename,
+				Size:     photo.Size,
+			})
+		}
+	}
+
+	err = u.messageRepository.AddMessage(message, chatId)
 	if err != nil {
 		log.Errorf("Usecase: не удалось добавить сообщение: %v", err)
 		return err
 	}
 
 	log.Printf("Usecase: сообщение успешно добавлено: %v", message.MessageId)
-	u.sendIvent(ctx, socketUsecase.NewMessage, message)
+
+	// Если это ветка, то нужно указать parent branch.
+	if chatType == branchType {
+		parentChatId, err := u.chatRepository.GetBranchParent(ctx, chatId)
+		if err != nil {
+			return err
+		}
+		message.ChatIdParent = parentChatId
+	}
+	u.SendIvent(ctx, socketUsecase.NewMessage, message)
+
 	metric.IncMetric(*sendedMessagesMetric)
 	return nil
 }
@@ -122,7 +192,7 @@ func (u *MessageUsecaseImplm) DeleteMessage(ctx context.Context, user jwt.User, 
 		return err
 	}
 
-	u.sendIvent(ctx, socketUsecase.DeleteMessage, message)
+	u.SendIvent(ctx, socketUsecase.DeleteMessage, message)
 	metric.IncMetric(*deleteMessageMetric)
 	return nil
 }
@@ -134,6 +204,11 @@ var updateMessageMetric = prometheus.NewGaugeVec(
 	},
 	nil, // no labels for this metric
 )
+
+// не нужен, можно в repo.AddMessage тип определять по наличию файлов.
+func (u *MessageUsecaseImplm) SendInformationalMessage(_ context.Context, message models.Message, chatId uuid.UUID) error {
+	return u.messageRepository.AddInformationalMessage(message, chatId)
+}
 
 func (u *MessageUsecaseImplm) UpdateMessage(ctx context.Context, user jwt.User, messageId uuid.UUID, message models.Message) error {
 	log := logger.LoggerWithCtx(ctx, logger.Log)
@@ -158,7 +233,7 @@ func (u *MessageUsecaseImplm) UpdateMessage(ctx context.Context, user jwt.User, 
 	// отправляем в сокет
 	message.Message = newText
 	message.IsRedacted = true
-	u.sendIvent(ctx, socketUsecase.UpdateMessage, message)
+	u.SendIvent(ctx, socketUsecase.UpdateMessage, message)
 	metric.IncMetric(*updateMessageMetric)
 	return nil
 }
@@ -183,7 +258,6 @@ func (u *MessageUsecaseImplm) SearchMessagesWithQuery(ctx context.Context, user 
 	}
 
 	messages, err := u.messageRepository.SearchMessagesWithQuery(ctx, chatId, searchQuery)
-
 	if err != nil {
 		return models.MessagesArrayDTO{}, err
 	}
@@ -227,7 +301,7 @@ func (u *MessageUsecaseImplm) GetMessagesWithPage(ctx context.Context, userId uu
 			}
 	}
 
-	messages, err := u.messageRepository.GetAllMessagesAfter(ctx, chatId, lastMessageId)
+	messages, err := u.messageRepository.GetMessagesAfter(ctx, chatId, lastMessageId)
 	if err != nil {
 		return models.MessagesArrayDTO{}, err
 	}
@@ -235,18 +309,41 @@ func (u *MessageUsecaseImplm) GetMessagesWithPage(ctx context.Context, userId uu
 	return models.MessagesArrayDTO{
 		Messages: messages,
 	}, nil
-
 }
 
-func (s *MessageUsecaseImplm) sendIvent(ctx context.Context, action string, message models.Message) {
+func (s *MessageUsecaseImplm) GetLastMessage(chatId uuid.UUID) (models.Message, error) {
+	return s.messageRepository.GetLastMessage(chatId)
+}
+
+func (s *MessageUsecaseImplm) SendIvent(ctx context.Context, action string, message models.Message) {
 	newMessage := socketUsecase.Message{
-		MessageId:  message.MessageId,
-		AuthorID:   message.AuthorID,
-		BranchID:   message.BranchID,
-		Message:    message.Message,
-		SentAt:     message.SentAt,
-		ChatId:     message.ChatId,
-		IsRedacted: message.IsRedacted,
+		MessageId:     message.MessageId,
+		AuthorID:      message.AuthorID,
+		BranchID:      message.BranchID,
+		Message:       message.Message,
+		SentAt:        message.SentAt,
+		ChatId:        message.ChatId,
+		IsRedacted:    message.IsRedacted,
+		ChatIdParent:  message.ChatIdParent,
+		Files:         message.Files,
+		FilesHeaders:  message.FilesHeaders,
+		Photos:        message.Photos,
+		PhotosHeaders: message.PhotosHeaders,
+		Sticker:       message.Sticker,
+	}
+	for _, value := range message.FilesDTO {
+		newMessage.FilesDTO = append(newMessage.FilesDTO, socketUsecase.Payload{
+			URL:      value.URL,
+			Filename: value.Filename,
+			Size:     value.Size,
+		})
+	}
+	for _, value := range message.PhotosDTO {
+		newMessage.PhotosDTO = append(newMessage.PhotosDTO, socketUsecase.Payload{
+			URL:      value.URL,
+			Filename: value.Filename,
+			Size:     value.Size,
+		})
 	}
 
 	log := logger.LoggerWithCtx(ctx, logger.Log)
@@ -272,4 +369,8 @@ func (s *MessageUsecaseImplm) sendIvent(ctx context.Context, action string, mess
 	if err != nil {
 		log.Fatalf("failed to publish a message. Error: %s", err)
 	}
+}
+
+func (s *MessageUsecaseImplm) GetPayload(ctx context.Context, chatId uuid.UUID) (files []models.Payload, photos []models.Payload, err error) {
+	return s.messageRepository.GetPayload(ctx, chatId)
 }

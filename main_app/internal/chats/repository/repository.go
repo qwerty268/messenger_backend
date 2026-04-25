@@ -20,9 +20,7 @@ type ChatRepositoryImpl struct {
 	chat_types map[string]int
 }
 
-const pageSize = 25
-
-// readChatTypes подгружает id чатов из бд
+// readChatTypes подгружает id чатов из бд.
 func readChatTypes(p *pgxpool.Pool) (map[string]int, error) {
 	var chat_types map[string]int = map[string]int{}
 
@@ -128,7 +126,6 @@ func (r *ChatRepositoryImpl) CreateNewChat(ctx context.Context, chat chatModel.C
 	}
 	var id uuid.UUID
 	err = row.Scan(&id)
-
 	if err != nil {
 		log.Printf("Unable to INSERT: %v\n", err)
 		return err
@@ -153,11 +150,12 @@ func (r *ChatRepositoryImpl) GetUserChats(ctx context.Context, userId uuid.UUID)
 		c.chat_name,
 		ch.value,
 		c.avatar_path,
-		c.chat_link_name
+		c.chat_link_name,
+		cu.send_notifications
 		FROM chat_user AS cu
 		JOIN chat AS c ON c.id = cu.chat_id
 		JOIN chat_type AS ch ON ch.id = c.chat_type_id
-		WHERE cu.user_id = $1;`,
+		WHERE cu.user_id = $1 AND ch.value != 'branch';`,
 		userId,
 	)
 	if err != nil {
@@ -173,21 +171,22 @@ func (r *ChatRepositoryImpl) GetUserChats(ctx context.Context, userId uuid.UUID)
 		var chatType string
 		var avatarURL sql.NullString
 		var chatURLName sql.NullString
+		var sendNotifications bool
 
 		log.Println("Repository: поиск параметров из запроса")
-		err = rows.Scan(&chatId, &chatName, &chatType, &avatarURL, &chatURLName)
-
+		err = rows.Scan(&chatId, &chatName, &chatType, &avatarURL, &chatURLName, &sendNotifications)
 		if err != nil {
 			log.Printf("Repository: unable to scan: %v", err)
 			return nil, err
 		}
 
 		chats = append(chats, chatModel.Chat{
-			ChatId:      chatId,
-			ChatName:    chatName,
-			ChatType:    chatType,
-			AvatarURL:   avatarURL.String,
-			ChatURLName: chatURLName.String,
+			ChatId:            chatId,
+			ChatName:          chatName,
+			ChatType:          chatType,
+			AvatarURL:         avatarURL.String,
+			ChatURLName:       chatURLName.String,
+			SendNotifications: sendNotifications,
 		})
 	}
 
@@ -214,7 +213,6 @@ func (r *ChatRepositoryImpl) GetChatType(ctx context.Context, chatId uuid.UUID) 
 		WHERE ch.id = $1;`,
 		chatId,
 	).Scan(&chatType)
-
 	if err != nil {
 		log.Errorf("Не удалось найти тип чата: %v", err)
 		return "", err
@@ -242,7 +240,6 @@ func (r *ChatRepositoryImpl) GetUserRoleInChat(ctx context.Context, userId uuid.
 		userId,
 		chatId,
 	).Scan(&role)
-
 	if err != nil {
 		return "", nil
 	}
@@ -269,9 +266,8 @@ func (r *ChatRepositoryImpl) AddUserIntoChat(ctx context.Context, userId uuid.UU
 		chatId,
 		userId,
 	).Scan(&id)
-
 	if err != nil {
-		log.Errorf("польтзователь %v не добавлен в чат %v. Ошибка: ", userId, chatId, err)
+		log.Errorf("польтзователь %v не добавлен в чат %v. Ошибка: %v", userId, chatId, err)
 		return err
 	}
 	log.Printf("польтзователь %v добавлен в чат %v", userId, chatId)
@@ -297,7 +293,6 @@ func (r *ChatRepositoryImpl) GetCountOfUsersInChat(ctx context.Context, chatId u
 		WHERE cu.chat_id = $1;`,
 		chatId,
 	).Scan(&count)
-
 	if err != nil {
 		return 0, err
 	}
@@ -330,7 +325,6 @@ func (r *ChatRepositoryImpl) GetChatById(ctx context.Context, chatId uuid.UUID) 
 		WHERE c.id = $1`,
 		chatId,
 	).Scan(&chatId, &chatName, &chatType, &avatarURL, &chatURLName)
-
 	if err != nil {
 		return chatModel.Chat{}, nil
 	}
@@ -342,7 +336,6 @@ func (r *ChatRepositoryImpl) GetChatById(ctx context.Context, chatId uuid.UUID) 
 		AvatarURL:   avatarURL.String,
 		ChatURLName: chatURLName.String,
 	}, nil
-
 }
 
 func (r *ChatRepositoryImpl) DeleteChat(ctx context.Context, chatId uuid.UUID) error {
@@ -360,7 +353,6 @@ func (r *ChatRepositoryImpl) DeleteChat(ctx context.Context, chatId uuid.UUID) e
 
 	// Выполнение удаления
 	_, err = conn.Exec(context.Background(), deleteQuery, chatId)
-
 	if err != nil {
 		log.Printf("Chat repository -> DeleteChat: не удалось удалить чат: %v", err)
 		return err
@@ -385,7 +377,6 @@ func (r *ChatRepositoryImpl) UpdateChat(ctx context.Context, chatId uuid.UUID, c
 
 	// Выполнение удаления
 	_, err = conn.Exec(ctx, deleteQuery, chatName, chatId)
-
 	if err != nil {
 		log.Printf("Chat repository -> UpdateChat: не удалось обновить чат: %v", err)
 		return err
@@ -409,7 +400,6 @@ func (r *ChatRepositoryImpl) DeleteUserFromChat(ctx context.Context, userId uuid
 
 	// Выполнение удаления
 	_, err = conn.Exec(ctx, deleteQuery, chatId, userId)
-
 	if err != nil {
 		log.Printf("Chat repository -> DeleteUserFromChat: не удалось обновить чат: %v", err)
 		return err
@@ -495,7 +485,6 @@ func (r *ChatRepositoryImpl) UpdateChatPhoto(ctx context.Context, chatId uuid.UU
 
 	// Выполнение удаления
 	_, err = conn.Exec(ctx, deleteQuery, filename, chatId)
-
 	if err != nil {
 		log.Printf("Chat repository -> UpdateChatPhoto: не удалось обновить чат: %v", err)
 		return err
@@ -519,94 +508,12 @@ func (r *ChatRepositoryImpl) GetNameAndAvatar(ctx context.Context, userId uuid.U
 		`SELECT name, avatar_path FROM public.user WHERE id = $1;`,
 		userId,
 	).Scan(&name, &filename)
-
 	if err != nil {
 		log.Printf("Chat repository -> GetNameAndAvatar: не удалось получитьб юзера: %v", err)
 		return "", "", err
 	}
 
 	return name.String, filename.String, nil
-}
-
-func (r *ChatRepositoryImpl) AddBranch(ctx context.Context, chatId uuid.UUID, messageID uuid.UUID) (chatModel.AddBranch, error) {
-	log := logger.LoggerWithCtx(ctx, logger.Log)
-	conn, err := r.pool.Acquire(ctx)
-	if err != nil {
-		log.Printf("Repository: Unable to acquire a database connection: %v\n", err)
-		return chatModel.AddBranch{}, err
-	}
-	defer conn.Release()
-
-	tx, err := conn.Conn().Begin(ctx)
-	if err != nil {
-		log.Printf("Repository: Unable to create transaction: %v\n", err)
-		return chatModel.AddBranch{}, err
-	}
-
-	var branch chatModel.AddBranch
-	branch.ID = uuid.New()
-
-	_, err = tx.Exec(
-		ctx,
-		`INSERT INTO public.chat 
-		(id,
-		chat_name,
-		chat_type_id
-		)
-		VALUES ($1, 'branch', (SELECT id FROM public.chat_type WHERE value = 'branch'))`,
-		branch.ID,
-	)
-
-	if err != nil {
-		log.Errorf("Не удалось добавить ветку: %v", err)
-		return chatModel.AddBranch{}, err
-	}
-
-	_, err = tx.Exec(
-		ctx,
-		`UPDATE public.message 
-		SET branch_id = $2
-		WHERE id = $1;`,
-		messageID,
-		branch.ID,
-	)
-
-	if err != nil {
-		log.Errorf("Не удалось привязать ветку к сообщению: %v", err)
-		return chatModel.AddBranch{}, err
-	}
-
-	log.Debugf("вставка юзеров в ветку %s чата %s", branch.ID.String(), chatId)
-
-	_, err = tx.Exec(
-		ctx,
-		`INSERT INTO public.chat_user 
-			(id, 
-			user_role_id, 
-			chat_id, 
-			user_id)
-		SELECT 
-			gen_random_uuid(),
-			(SELECT id FROM public.user_role WHERE value = 'none'), 
-			$2, 
-			cu.user_id 
-		FROM public.chat_user cu
-		WHERE cu.chat_id = $1;`,
-		chatId,
-		branch.ID,
-	)
-
-	if err != nil {
-		log.Errorf("Не удалось добавить пользователей в ветку: %v", err)
-		return chatModel.AddBranch{}, err
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		log.Errorf("Не удалось подтвердить транзакцию: %v", err)
-		return chatModel.AddBranch{}, err
-	}
-
-	return branch, nil
 }
 
 func (r *ChatRepositoryImpl) SearchUserChats(ctx context.Context, userId uuid.UUID, keyWord string) ([]chatModel.Chat, error) {
@@ -651,7 +558,6 @@ func (r *ChatRepositoryImpl) SearchUserChats(ctx context.Context, userId uuid.UU
 
 		log.Debugln("поиск параметров из запроса")
 		err = rows.Scan(&chatId, &chatName, &chatType, &avatarURL, &chatURLName)
-
 		if err != nil {
 			log.Errorf("unable to scan: %v", err)
 			return nil, err
@@ -726,7 +632,6 @@ func (r *ChatRepositoryImpl) SearchGlobalChats(ctx context.Context, userId uuid.
 
 		log.Debugln("поиск параметров из запроса")
 		err = rows.Scan(&chatId, &chatName, &chatType, &avatarURL, &chatURLName)
-
 		if err != nil {
 			log.Errorf("unable to scan: %v", err)
 			return nil, err

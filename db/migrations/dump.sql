@@ -46,7 +46,8 @@ CREATE TABLE public.chat_user (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_role_id integer NOT NULL,
     chat_id uuid NOT NULL,
-    user_id uuid NOT NULL
+    user_id uuid NOT NULL,
+    send_notifications boolean DEFAULT true NOT NULL 
 );
 
 
@@ -65,9 +66,40 @@ CREATE TABLE public.contact (
 
 ALTER TABLE public.contact OWNER TO postgres;
 
+CREATE TABLE public.sticker (
+	id uuid NOT NULL,
+	sticker_path text NOT NULL,
+	CONSTRAINT sticker_pk PRIMARY KEY (id),
+	CONSTRAINT sticker_unique UNIQUE (sticker_path)
+);
+
+CREATE TABLE public.sticker_pack (
+	id uuid NOT NULL,
+	"name" text NULL,
+	photo text NOT NULL,
+	CONSTRAINT sticker_pack_pk PRIMARY KEY (id)
+);
+
+CREATE TABLE public.sticker_sticker_pack (
+	id uuid NOT NULL,
+	sticker uuid NOT NULL,
+	pack uuid NOT NULL,
+	CONSTRAINT sticker_sticker_pack_pk PRIMARY KEY (id),
+	CONSTRAINT sticker_sticker_pack_sticker_fk FOREIGN KEY (sticker) REFERENCES public.sticker(id),
+	CONSTRAINT sticker_sticker_pack_sticker_pack_fk FOREIGN KEY (pack) REFERENCES public.sticker_pack(id)
+);
+
 --
 -- Name: message; Type: TABLE; Schema: public; Owner: postgres
 --
+
+CREATE TABLE public.message_type (
+    id integer NOT NULL,
+    value text NOT NULL
+);
+
+ALTER TABLE ONLY public.message_type
+    ADD CONSTRAINT message_type_pkey PRIMARY KEY (id);
 
 CREATE TABLE public.message (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -77,11 +109,35 @@ CREATE TABLE public.message (
     message text,
     sent_at timestamp with time zone NOT NULL,
     is_redacted boolean DEFAULT false NOT NULL,
-    sticker_path text
+    sticker_path text,
+    message_type_id integer DEFAULT 1 NOT NULL,
+    CONSTRAINT message_sticker_path_fk FOREIGN KEY (sticker_path) REFERENCES public.sticker(sticker_path)
 );
 
 
 ALTER TABLE public.message OWNER TO postgres;
+
+ALTER TABLE public.message_type ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.message_type_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+ALTER TABLE ONLY public.message
+    ADD CONSTRAINT message_type_id_fk FOREIGN KEY (message_type_id) REFERENCES public.message_type(id) NOT VALID;
+
+
+CREATE TABLE public.payload_type (
+	id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+	value text NOT NULL,
+	CONSTRAINT payload_type_pk PRIMARY KEY (id),
+	CONSTRAINT payload_type_unique UNIQUE (value)
+);
+
+ALTER TABLE public.payload_type OWNER TO postgres;
 
 --
 -- Name: message_payload; Type: TABLE; Schema: public; Owner: postgres
@@ -90,11 +146,17 @@ ALTER TABLE public.message OWNER TO postgres;
 CREATE TABLE public.message_payload (
     payload_path text NOT NULL,
     id uuid NOT NULL,
-    message_id uuid NOT NULL
+    message_id uuid NOT NULL,
+    payload_type integer DEFAULT 1 NOT NULL,
+    filename text NOT NULL,
+    size int NOT NULL
 );
 
-
 ALTER TABLE public.message_payload OWNER TO postgres;
+
+ALTER TABLE ONLY public.message_payload
+    ADD CONSTRAINT payload_type_id_fk FOREIGN KEY (payload_type) REFERENCES public.payload_type(id) NOT VALID;
+
 
 --
 -- Name: user; Type: TABLE; Schema: public; Owner: postgres
@@ -299,7 +361,8 @@ ALTER TABLE ONLY public.contact
 --
 
 ALTER TABLE ONLY public.message_payload
-    ADD CONSTRAINT message_id_fk_message_payload_id_pk_messages FOREIGN KEY (message_id) REFERENCES public.message(id);
+    ADD CONSTRAINT message_id_fk_message_payload_id_pk_messages FOREIGN KEY (message_id) REFERENCES public.message(id)
+    ON DELETE CASCADE;
 
 
 --
@@ -326,10 +389,33 @@ ALTER TABLE ONLY public.chat_user
     ADD CONSTRAINT user_role_id_fk_chat_users_chat_id_pk_user_roles FOREIGN KEY (user_role_id) REFERENCES public.user_role(id);
 
    
+CREATE TABLE public.chat_branch
+(
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    chat_id uuid NOT NULL,
+    branch_id uuid NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT chat_id_fk_for_branch FOREIGN KEY (chat_id)
+        REFERENCES public.chat (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT branch_id_fk_for_branch FOREIGN KEY (branch_id)
+        REFERENCES public.chat (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
+);
+
+ALTER TABLE IF EXISTS public.chat_branch
+    OWNER to postgres;
+
+COMMENT ON TABLE public.chat_branch
+    IS 'Таблица в которой хранятся чаты и их ветки';
+
 --
 -- PostgreSQL database dump complete
 --
-
 
 INSERT INTO public.chat_type (value) VALUES
 ('personal'),
@@ -342,12 +428,59 @@ INSERT INTO  public.user_role ( value) VALUES
 ('owner'),
 ('admin');
 
-
 --
 -- Insert test data to user
 --
+INSERT INTO message_type (value) VALUES 
+    ('default'),
+    ('informational'),
+    ('with_payload'),
+    ('sticker');
+
+INSERT INTO  payload_type (value) VALUES
+('file'),
+('photo');
+
+INSERT INTO sticker (id, sticker_path) VALUES
+    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
+    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f466313dbaf51a93aa2e4'),
+    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f391413dbaf51a93aa2db'),
+    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d25b5803e3d181d0ecc4'),
+    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4535803e3d181d0ecc6'),
+    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7'),
+    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5135803e3d181d0ecc8'),
+    ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d5505803e3d181d0ecc9'),
+    ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca'),
+    ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8aa5803e3d181d0eccb'),
+    ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8d85803e3d181d0eccc'),
+    ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d8f45803e3d181d0eccd'),
+    ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d90e5803e3d181d0ecce'),
+    ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d9215803e3d181d0eccf');
+
+
+
+INSERT INTO sticker_pack (id, photo) VALUES
+    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/675f2ea013dbaf51a93aa2d3'),
+    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d7f95803e3d181d0ecca');
+
+INSERT INTO sticker_sticker_pack (id, sticker, pack) VALUES
+    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80','a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80','b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80','c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('d0a0aaa0-d461-437d-b4eb-bf030a0efc80','d0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('e0a0aaa0-d461-437d-b4eb-bf030a0efc80','e0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f0a0aaa0-d461-437d-b4eb-bf030a0efc80','f0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80','a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f1a0aaa0-d461-437d-b4eb-bf030a0efc80','f1a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f2a0aaa0-d461-437d-b4eb-bf030a0efc80','f2a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f3a0aaa0-d461-437d-b4eb-bf030a0efc80','f3a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f4a0aaa0-d461-437d-b4eb-bf030a0efc80','f4a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f5a0aaa0-d461-437d-b4eb-bf030a0efc80','f5a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f6a0aaa0-d461-437d-b4eb-bf030a0efc80','f6a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80'),
+    ('f7a0aaa0-d461-437d-b4eb-bf030a0efc80','f7a0aaa0-d461-437d-b4eb-bf030a0efc80', 'a1a0aaa0-d461-437d-b4eb-bf030a0efc80');
 
 INSERT INTO public."user" (id, username, version, password, name, bio, birthdate, avatar_path) VALUES
+    ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'patefon', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Patefon', 'Offical 👽', '1999-12-31T00:00:00Z', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png'),
     ('39a9aea0-d461-437d-b4eb-bf030a0efc80', 'user11', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Бал Матье', 'Люблю путешествия 🌍', '1990-05-15T00:00:00Z', '/uploads/avatar/642c5a57-ebc7-49d0-ac2d-f2f1f474bee7.png'),
     ('fa4e08e4-1024-49cb-a799-4aa2a4f3a9df', 'user22', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Жабка Пепе', 'Кулинар и знаток природы 🍽️🦎', '1992-08-28T00:00:00Z', '/uploads/avatar/d60053d3-e3a9-4a30-b9a3-cdfdc3431fde.png'),
     (gen_random_uuid(), 'user33', 0, 'e208b28e33d1cb6c69bdddbc5f4298652be5ae2064a8933ce8a97556334715483259a4f4e003c6f5c44a9ceed09b49c792c0a619c5c5a276bbbdcfbd45c6c648', 'Dr Peper', 'Люблю газированные напитки 🥤', '1988-12-01T00:00:00Z', NULL),
@@ -375,7 +508,13 @@ INSERT INTO chat (chat_name, chat_type_id, id) VALUES
     ('not funny channel', 3, 'e9a9aea0-d461-437d-b4eb-bf030a0efc80'),
     ('my little channel', 3, 'f9a9aea0-d461-437d-b4eb-bf030a0efc80');
 
+INSERT INTO chat (chat_name, chat_type_id, id, avatar_path) VALUES
+    ('patefon', 3, 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', '/uploads/avatar/f9a9aea0-d461-437d-b4eb-bf030a0efc80.png');
+
+
+
 INSERT INTO chat_user (id, user_role_id, chat_id, user_id) VALUES
+    ('a2a0aaa0-d461-437d-b4eb-bf030a0efc80', 3, (SELECT id FROM public.chat WHERE chat_name = 'patefon'), (SELECT id FROM public.user where username ='patefon')),
     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2, (SELECT id FROM public.chat WHERE chat_name = 'oleg'), (SELECT id FROM public.user where username ='user11')),
     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'oleg'),  (SELECT id FROM public.user where username ='user22')),
     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', 2,(SELECT id FROM public.chat WHERE chat_name = 'kizaru'), (SELECT id FROM public.user where username ='user11')),
@@ -392,3 +531,30 @@ INSERT INTO chat_user (id, user_role_id, chat_id, user_id) VALUES
     ('f9a0aaa0-d461-437d-b4eb-bf030a0efc80', 1,(SELECT id FROM public.chat WHERE chat_name = 'not funny channel'), (SELECT id FROM public.user where username ='user33')),
     ('a1a0aaa0-d461-437d-b4eb-bf030a0efc80', 3,(SELECT id FROM public.chat WHERE chat_name = 'my little channel'), (SELECT id FROM public.user where username ='user44'));
 
+
+INSERT INTO message (id, chat_id, author_id, sticker_path, message_type_id, sent_at) VALUES
+    ('a9a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7', 4, '1999-12-31 00:00:00.881 +0300');
+
+INSERT INTO message (id, chat_id, author_id, message, message_type_id, sent_at) VALUES
+    ('a8a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'Привет! 🎉 
+
+Добро пожаловать в Патефон! Мы рады видеть тебя здесь. Это пространство для общения, обмена идеями и просто хорошего времяпрепровождения. 
+
+Здесь ты сможешь находить новых друзей, участвовать в интересных беседах и делиться своими увлечениями. Если у тебя возникнут вопросы или потребуется помощь, не стесняйся обращаться к нашей команде поддержки.
+
+Начни свое путешествие с Патефоном прямо сейчас — приятно провести время! 💬✨', 1, '1999-12-31 00:00:00.881 +0300');
+
+CREATE OR REPLACE FUNCTION add_user_to_default_chat()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.chat_user (user_role_id, chat_id, user_id)
+    VALUES (1, (SELECT id FROM public.chat WHERE chat_name = 'patefon'), NEW.id);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_add_user_to_chat_user
+AFTER INSERT ON public."user"
+FOR EACH ROW
+EXECUTE FUNCTION add_user_to_default_chat();

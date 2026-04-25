@@ -19,8 +19,6 @@ backend_app
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-uploads/avatar/
-uploads/chat/
 
 # Go workspace file
 go.work
@@ -28,3 +26,10 @@ go.work.sum
 
 # env file
 .env
+grafana/grafana.db
+
+#убираем логи
+log/*
+
+#убираем PGbager output
+out.html

@@ -1,18 +1,35 @@
-# Start from a Debian image with the latest version of Go installed
-# and a workspace (GOPATH) configured at /go.
-FROM golang
+# Stage 1: builder
+FROM golang:1.23-alpine AS builder
 
-COPY ./go.mod ./go.sum ./
+WORKDIR /build
 
-COPY ./ ./
+# Устанавливаем C-зависимости для CGO (libwebp требует нативных символов)
+RUN apk add --no-cache gcc musl-dev libwebp-dev
 
-# Build the outyet command inside the container.
-# (You may fetch or manage dependencies here,
-# either manually or with a tool like "godep".)
+# Копируем go.mod и go.sum из корня репозитория и скачиваем зависимости
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Run the outyet command by default when the container starts.
+# Копируем весь исходный код
+COPY . .
 
-ENTRYPOINT go run ./main_app/cmd/app/main.go
+# Компилируем бинарник main_app с CGO (требуется для github.com/chai2010/webp)
+RUN CGO_ENABLED=1 GOOS=linux go build -o /app/server ./main_app/cmd/app/main.go
 
-# Document that the service listens on port 8080.
+# Stage 2: runner
+FROM alpine:latest AS runner
+
+WORKDIR /app
+
+# Устанавливаем runtime-библиотеку libwebp
+RUN apk add --no-cache libwebp
+
+# Копируем скомпилированный бинарник из builder
+COPY --from=builder /app/server .
+
+# Копируем файл конфига базы данных
+COPY --from=builder /build/db/config/config.yaml ./db/config/config.yaml
+
 EXPOSE 8082 8080
+
+ENTRYPOINT ["/app/server"]
