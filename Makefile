@@ -54,5 +54,46 @@ lint:
 lintfix:
 	golangci-lint run --fix
 
+# Kubernetes / minikube
+
+NAMESPACE=messenger
+
+# Пересобрать все сервисы и перезапустить поды
+k8s-rebuild-all: k8s-rebuild-auth k8s-rebuild-main k8s-rebuild-ws
+
+# Пересобрать auth-service и перезапустить деплоймент
+k8s-rebuild-auth:
+	eval $$(minikube docker-env) && docker build -t messenger/auth-service:latest -f auth_service/Dockerfile .
+	kubectl rollout restart deployment/auth-service -n $(NAMESPACE)
+	kubectl rollout status deployment/auth-service -n $(NAMESPACE) --timeout=120s
+
+# Пересобрать main-app и перезапустить деплоймент
+k8s-rebuild-main:
+	eval $$(minikube docker-env) && docker build -t messenger/main-app:latest -f main_app/Dockerfile .
+	kubectl rollout restart deployment/main-app -n $(NAMESPACE)
+	kubectl rollout status deployment/main-app -n $(NAMESPACE) --timeout=120s
+
+# Пересобрать websocket-service и перезапустить деплоймент
+k8s-rebuild-ws:
+	eval $$(minikube docker-env) && docker build -t messenger/websocket-service:latest -f websocket_service/Dockerfile .
+	kubectl rollout restart deployment/websocket-service -n $(NAMESPACE)
+	kubectl rollout status deployment/websocket-service -n $(NAMESPACE) --timeout=120s
+
+# Статус подов
+k8s-status:
+	kubectl get pods -n $(NAMESPACE)
+
+# Логи сервисов (последние 100 строк)
+k8s-logs-auth:
+	kubectl logs -n $(NAMESPACE) deployment/auth-service --tail=100 -f
+
+k8s-logs-main:
+	kubectl logs -n $(NAMESPACE) deployment/main-app --tail=100 -f
+
+k8s-logs-ws:
+	kubectl logs -n $(NAMESPACE) deployment/websocket-service --tail=100 -f
+
 # Основная команда по умолчанию
-.PHONY: build lint clean run deps
+.PHONY: build lint clean run deps \
+	k8s-rebuild-all k8s-rebuild-auth k8s-rebuild-main k8s-rebuild-ws \
+	k8s-status k8s-logs-auth k8s-logs-main k8s-logs-ws
