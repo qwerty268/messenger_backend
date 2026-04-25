@@ -126,7 +126,7 @@ func main() {
 	// auth
 
 	grpcConnAuth, err := grpc.NewClient(
-		"auth:8081",
+		"auth-service:8081",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {

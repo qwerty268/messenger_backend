@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	host = "patefon"
+	host = "main-app"
 	port = 8082
 )
 
@@ -44,7 +44,7 @@ func main() {
 	// auth
 
 	grpcConnAuth, err := grpc.Dial(
-		"auth:8081",
+		"auth-service:8081",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {

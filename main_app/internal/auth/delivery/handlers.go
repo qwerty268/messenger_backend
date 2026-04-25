@@ -95,6 +95,7 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("не удалось аутентифицировать пользователя")
 		responser.SendError(ctx, w, "Invalid format JSON", http.StatusUnauthorized)
+		return
 	}
 
 	if grpcResp.GetIsAuthenticated() {
