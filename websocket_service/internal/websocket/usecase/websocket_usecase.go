@@ -27,7 +27,8 @@ type ChatInfo struct {
 }
 
 type WebsocketUsecase struct {
-	ch *amqp.Channel
+	chMessages *amqp.Channel
+	chChats    *amqp.Channel
 	// мапа с чатами и каналами для ивентов по чатам
 	onlineChats map[uuid.UUID]ChatInfo
 	// мапа с онлайн пользователями и
@@ -35,31 +36,18 @@ type WebsocketUsecase struct {
 	chatRepository grpcChat.ChatServiceClient
 }
 
-func NewWebsocketUsecase(ch *amqp.Channel, host string, port int) *WebsocketUsecase {
-	_, err := ch.QueueDeclare(
-		"message", // name
-		false,     // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
-	)
+func NewWebsocketUsecase(conn *amqp.Connection, host string, port int) *WebsocketUsecase {
+	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+	log.Infof("websocket usecase started without queue redeclare; expecting queues %q and %q to be created by publishers", "message", "chat")
+
+	chMessages, err := conn.Channel()
 	if err != nil {
-		log := logger.LoggerWithCtx(context.Background(), logger.Log)
-		log.Fatalf("failed to declare a queue. Error: %s", err)
+		log.Fatalf("failed to open channel for messages consumer. Error: %s", err)
 	}
 
-	_, err = ch.QueueDeclare(
-		"chat", // name
-		false,  // durable
-		false,  // delete when unused
-		false,  // exclusive
-		false,  // no-wait
-		nil,    // arguments
-	)
+	chChats, err := conn.Channel()
 	if err != nil {
-		log := logger.LoggerWithCtx(context.Background(), logger.Log)
-		log.Fatalf("failed to declare a queue. Error: %s", err)
+		log.Fatalf("failed to open channel for chats consumer. Error: %s", err)
 	}
 
 	grpcAddress := net.JoinHostPort(host, strconv.Itoa(port))
@@ -75,7 +63,8 @@ func NewWebsocketUsecase(ch *amqp.Channel, host string, port int) *WebsocketUsec
 	grpcClient := grpcChat.NewChatServiceClient(cc)
 
 	socket := &WebsocketUsecase{
-		ch:             ch,
+		chMessages:     chMessages,
+		chChats:        chChats,
 		onlineChats:    map[uuid.UUID]ChatInfo{},
 		onlineUsers:    map[uuid.UUID]chan AnyEvent{},
 		chatRepository: grpcClient,

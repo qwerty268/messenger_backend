@@ -302,6 +302,10 @@ func getPhotoMetadata(header *multipart.FileHeader, size int64) bson.D {
 func getFileBuffer(file multipart.File) (bytes.Buffer, error) {
 	fileBuffer := new(bytes.Buffer)
 
+	if file == nil {
+		return bytes.Buffer{}, errors.New("file is nil")
+	}
+
 	fmt.Println("file: ", file)
 
 	if _, err := io.Copy(fileBuffer, file); err != nil {

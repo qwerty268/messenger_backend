@@ -33,6 +33,8 @@ type Delivery struct {
 // /files/675f466313dbaf51a93aa2e4
 // /files/675f391413dbaf51a93aa2db.
 func New(usecase Usecase) *Delivery {
+	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+
 	URLs := []string{
 		"/uploads/stickers/utka/675f2ea013dbaf51a93aa2d3.webp",
 		"/uploads/stickers/utka/675f466313dbaf51a93aa2e4.webp",
@@ -54,12 +56,19 @@ func New(usecase Usecase) *Delivery {
 	for _, url := range URLs {
 		file, header, err := getMultipartFile(url)
 		if err != nil {
-			fmt.Errorf("stickers get error: %v", err)
+			log.WithError(err).Warnf("пропускаем инициализацию стикера %s", url)
+			continue
+		}
+
+		if file == nil || header == nil {
+			log.Warnf("пропускаем инициализацию стикера %s: file=%v header=%v", url, file, header)
+			continue
 		}
 
 		err = usecase.SaveSticker(context.Background(), file, header, url)
 		if err != nil {
-			fmt.Errorf("stickers save error: %v", err)
+			log.WithError(err).Warnf("не удалось сохранить стартовый стикер %s", url)
+			continue
 		}
 	}
 

@@ -36,7 +36,8 @@ func DeserializeMessageEvent(data []byte) (MessageEvent, error) {
 func (w *WebsocketUsecase) consumeMessages() {
 	log := logger.LoggerWithCtx(context.Background(), logger.Log)
 	for {
-		messages, err := w.ch.Consume(
+		log.Infof("starting consumer for queue %q", "message")
+		messages, err := w.chMessages.Consume(
 			"message", // queue
 			"",        // consumer
 			true,      // auto-ack

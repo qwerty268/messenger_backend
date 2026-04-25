@@ -32,16 +32,9 @@ func main() {
 		_ = conn.Close() // Закрываем подключение в случае удачной попытки
 	}()
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("failed to open channel. Error: %s", err)
-	}
-	defer func() {
-		_ = ch.Close() // Закрываем канал в случае удачной попытки открытия
-	}()
 	log.Println("rebbit mq подключен")
 
-	socketUsecase := usecase.NewWebsocketUsecase(ch, host, port)
+	socketUsecase := usecase.NewWebsocketUsecase(conn, host, port)
 	socketDelivery := delivery.NewWebsocket(*socketUsecase)
 
 	router := mux.NewRouter()

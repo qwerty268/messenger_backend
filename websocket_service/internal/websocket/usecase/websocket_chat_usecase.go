@@ -29,7 +29,8 @@ type ChatEvent struct {
 func (w *WebsocketUsecase) consumeChats() {
 	log := logger.LoggerWithCtx(context.Background(), logger.Log)
 	for {
-		messages, err := w.ch.Consume(
+		log.Infof("starting consumer for queue %q", "chat")
+		messages, err := w.chChats.Consume(
 			"chat", // queue
 			"",     // consumer
 			true,   // auto-ack
