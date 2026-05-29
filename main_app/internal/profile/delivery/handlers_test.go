@@ -14,10 +14,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/delivery"
-	mock_usecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/delivery/mocks"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/models"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/profile/delivery"
+	mock_usecase "github.com/qwerty268/messenger_backend/main_app/internal/profile/delivery/mocks"
+	"github.com/qwerty268/messenger_backend/main_app/internal/profile/models"
 )
 
 func TestGetProfileHandler(t *testing.T) {

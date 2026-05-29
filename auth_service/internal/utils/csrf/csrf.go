@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/models"
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/usecase"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/models"
+	auth "github.com/qwerty268/messenger_backend/auth_service/internal/auth/usecase"
 )
 
 var jwtSecret = auth.GenerateJWTSecret()

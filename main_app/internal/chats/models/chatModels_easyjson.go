@@ -4,11 +4,12 @@ package model
 
 import (
 	json "encoding/json"
-	models "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
+
 	uuid "github.com/google/uuid"
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
+	models "github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
 )
 
 // suppress unused package warning

@@ -18,8 +18,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/models"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/main_app/internal/files/models"
 )
 
 const fileURLPrefix = "/files/"

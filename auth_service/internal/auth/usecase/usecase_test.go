@@ -12,10 +12,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/usecase"
-	repo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/usecase/mocks"
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/proto"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/usecase"
+	repo "github.com/qwerty268/messenger_backend/auth_service/internal/auth/usecase/mocks"
+	authv1 "github.com/qwerty268/messenger_backend/auth_service/internal/proto"
 )
 
 func TestAuthenticate_Success(t *testing.T) {

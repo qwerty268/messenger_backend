@@ -15,13 +15,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.octolab.org/pointer"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
+	"github.com/qwerty268/messenger_backend/global_utils/csrf"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	"github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/utils/validator"
+	authv1 "github.com/qwerty268/messenger_backend/protos/gen/go/authv1"
 )
 
 //go:generate mockgen -source=handlers.go -destination=mocks/mocks.go
@@ -363,8 +363,8 @@ func (d *Delivery) setTokens(w http.ResponseWriter, r *http.Request, username st
 		Value:    grcpResp.GetToken(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 

@@ -28,7 +28,9 @@ deploy/k8s/
 ├── configmap.yaml          # Конфигурация (порты, хосты, адреса)
 ├── secret.example.yaml     # Шаблон секретов (коммитится в git)
 ├── secret.yaml             # Реальные секреты (НЕ коммитится в git)
-├── infrastructure.yaml     # PostgreSQL + RabbitMQ + MongoDB
+├── infrastructure.yaml     # PostgreSQL + RabbitMQ + MongoDB (StatefulSet)
+├── backup-postgres.yaml    # CronJob для бэкапов PostgreSQL
+├── backup-mongodb.yaml     # CronJob для бэкапов MongoDB
 ├── auth-service.yaml       # Deployment + Service для auth-service
 ├── main-app.yaml           # Deployment + Service для main-app
 ├── websocket-service.yaml  # Deployment + Service для websocket-service
@@ -108,29 +110,35 @@ cp deploy/k8s/secret.example.yaml deploy/k8s/secret.yaml
 
 ### [`infrastructure.yaml`](./infrastructure.yaml)
 
-Содержит Deployment + Service для трёх инфраструктурных компонентов:
+Содержит StatefulSet + Service для трёх инфраструктурных компонентов:
 
 #### PostgreSQL (`postgres:15-alpine`)
+- **Тип:** StatefulSet с PersistentVolumeClaim (10Gi)
 - Порт: `5432`
 - Credentials берутся из Secret (`POSTGRES_USER`, `POSTGRES_PASSWORD`)
 - База данных берётся из ConfigMap (`POSTGRES_DB`)
 - readinessProbe: `pg_isready`
+- **Хранение данных:** PersistentVolumeClaim `postgres-storage` (10Gi)
+- **Headless Service:** `postgres-headless` для StatefulSet
 
 #### RabbitMQ (`rabbitmq:3-management-alpine`)
+- **Тип:** Deployment (без PVC)
 - AMQP-порт: `5672`
 - Management UI: `15672`
 - Credentials берутся из Secret (`RABBITMQ_USER`, `RABBITMQ_PASSWORD`)
 - readinessProbe: `tcpSocket` на порт 5672
 
 #### MongoDB (`mongo:6`)
+- **Тип:** StatefulSet с PersistentVolumeClaim (10Gi)
 - Порт: `27017`
 - Инициализационный скрипт монтируется из ConfigMap `mongodb-init-script`
 - Скрипт создаёт пользователя `user` с доступом к базе `files`
 - readinessProbe: `mongosh --eval "db.adminCommand('ping')"`
+- **Хранение данных:** PersistentVolumeClaim `mongodb-storage` (10Gi)
+- **Headless Service:** `mongodb-headless` для StatefulSet
 
-> **Примечание:** Инфраструктурные компоненты работают без PersistentVolumeClaim —
-> данные хранятся в ephemeral-хранилище пода. При перезапуске пода данные теряются.
-> Для production-окружения необходимо добавить PVC.
+> **Важно:** PostgreSQL и MongoDB используют StatefulSet с PersistentVolumeClaim —
+> данные сохраняются при перезапуске подов. RabbitMQ остаётся без PVC (ephemeral).
 
 ---
 
@@ -200,6 +208,80 @@ initContainers:
 
 ---
 
+### [`backup-postgres.yaml`](./backup-postgres.yaml)
+
+CronJob для автоматического резервного копирования PostgreSQL.
+
+| Параметр | Значение |
+|---|---|
+| Расписание | Ежедневно в 02:00 UTC |
+| Хранение бэкапов | PersistentVolumeClaim `postgres-backup-pvc` (20Gi) |
+| Формат | SQL-дамп, сжатый gzip |
+| Удаление старых бэкапов | Автоматически через 7 дней |
+
+**Команда бэкапа:**
+```bash
+pg_dump -h postgres -U $POSTGRES_USER -d $POSTGRES_DB \
+  --clean --if-exists --format=plain --no-owner --no-acl | gzip
+```
+
+**Применение:**
+```bash
+kubectl apply -f deploy/k8s/backup-postgres.yaml
+```
+
+**Восстановление из бэкапа:**
+```bash
+# Получить список бэкапов
+kubectl exec -n messenger postgres-backup-<job-id> -- ls -lh /backup/
+
+# Скопировать бэкап локально
+kubectl cp -n messenger postgres-backup-<job-id>:/backup/postgres-backup-YYYYMMDD-HHMMSS.sql.gz ./backup.sql.gz
+
+# Восстановить
+gunzip -c backup.sql.gz | kubectl exec -i -n messenger statefulset/postgres -- psql -U $POSTGRES_USER -d $POSTGRES_DB
+```
+
+---
+
+### [`backup-mongodb.yaml`](./backup-mongodb.yaml)
+
+CronJob для автоматического резервного копирования MongoDB.
+
+| Параметр | Значение |
+|---|---|
+| Расписание | Ежедневно в 03:00 UTC |
+| Хранение бэкапов | PersistentVolumeClaim `mongodb-backup-pvc` (20Gi) |
+| Формат | MongoDB archive, сжатый gzip |
+| Удаление старых бэкапов | Автоматически через 7 дней |
+
+**Команда бэкапа:**
+```bash
+mongodump --host mongodb --port 27017 --username root \
+  --password $MONGODB_PASSWORD --authenticationDatabase=admin \
+  --db files --archive=/backup/mongodb-backup-YYYYMMDD-HHMMSS.gz --gzip
+```
+
+**Применение:**
+```bash
+kubectl apply -f deploy/k8s/backup-mongodb.yaml
+```
+
+**Восстановление из бэкапа:**
+```bash
+# Получить список бэкапов
+kubectl exec -n messenger mongodb-backup-<job-id> -- ls -lh /backup/
+
+# Скопировать бэкап локально
+kubectl cp -n messenger mongodb-backup-<job-id>:/backup/mongodb-backup-YYYYMMDD-HHMMSS.gz ./backup.gz
+
+# Восстановить
+kubectl cp -n messenger ./backup.gz mongodb-0:/tmp/backup.gz
+kubectl exec -n messenger statefulset/mongodb -- mongorestore --archive=/tmp/backup.gz --gzip
+```
+
+---
+
 ### [`ingress.yaml`](./ingress.yaml)
 
 HTTP/WebSocket маршрутизация через nginx ingress controller.
@@ -259,6 +341,8 @@ kubectl apply -f deploy/k8s/namespace.yaml
 kubectl apply -f deploy/k8s/configmap.yaml
 kubectl apply -f deploy/k8s/secret.yaml
 kubectl apply -f deploy/k8s/infrastructure.yaml
+kubectl apply -f deploy/k8s/backup-postgres.yaml
+kubectl apply -f deploy/k8s/backup-mongodb.yaml
 kubectl apply -f deploy/k8s/auth-service.yaml
 kubectl apply -f deploy/k8s/main-app.yaml
 kubectl apply -f deploy/k8s/websocket-service.yaml
@@ -529,18 +613,18 @@ kubectl describe ingress -n messenger
 
 ### Данные в БД пропали после перезапуска
 
-**Причина:** инфраструктурные компоненты (PostgreSQL, RabbitMQ, MongoDB) работают
-без PersistentVolumeClaim — данные хранятся в ephemeral-хранилище пода.
+**Причина:** RabbitMQ работает без PersistentVolumeClaim — данные хранятся в ephemeral-хранилище пода.
 
 **Решение для разработки:** применить миграции заново после перезапуска:
 
 ```bash
 # Применить SQL-миграции к PostgreSQL
-kubectl exec -n messenger deployment/postgres -- \
+kubectl exec -n messenger statefulset/postgres -- \
   psql -U <user> -d patefon -f /path/to/migration.sql
 ```
 
-Для production необходимо добавить PVC к каждому инфраструктурному компоненту.
+> **Важно:** PostgreSQL и MongoDB используют StatefulSet с PersistentVolumeClaim —
+> данные сохраняются при перезапуске подов. RabbitMQ остаётся без PVC (ephemeral).
 
 ---
 

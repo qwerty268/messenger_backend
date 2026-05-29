@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
 )
 
 //go:generate mockgen -source=messages_usecase_interface.go -destination=mocks/mocks.go

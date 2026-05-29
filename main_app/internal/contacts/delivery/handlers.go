@@ -11,13 +11,13 @@ import (
 	"github.com/mailru/easyjson"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/models"
-	repo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/repository"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/contacts/models"
+	repo "github.com/qwerty268/messenger_backend/main_app/internal/contacts/repository"
+	"github.com/qwerty268/messenger_backend/main_app/internal/utils/validator"
 )
 
 const (

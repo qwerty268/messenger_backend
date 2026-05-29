@@ -30,10 +30,10 @@ data:
     db.createCollection('mongodb_docker');
 ---
 # ============================================================
-# PostgreSQL
+# PostgreSQL StatefulSet
 # ============================================================
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: messenger
@@ -41,6 +41,7 @@ metadata:
     app: postgres
     app.kubernetes.io/part-of: messenger-backend
 spec:
+  serviceName: postgres-headless
   replicas: 1
   selector:
     matchLabels:
@@ -71,11 +72,24 @@ spec:
                 configMapKeyRef:
                   name: messenger-config
                   key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
             initialDelaySeconds: 5
             periodSeconds: 5
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
@@ -86,6 +100,23 @@ metadata:
     app: postgres
     app.kubernetes.io/part-of: messenger-backend
 spec:
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: messenger
+  labels:
+    app: postgres
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  clusterIP: None
   selector:
     app: postgres
   ports:
@@ -133,6 +164,17 @@ spec:
                 secretKeyRef:
                   name: messenger-secrets
                   key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_NODE_TYPE
+              value: "quorum"
+            - name: RABBITMQ_DISK_FREE_LIMIT
+              value: "{mem_relative, 1.0}"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 5000m
+              memory: 2Gi
           readinessProbe:
             tcpSocket:
               port: 5672
@@ -159,10 +201,10 @@ spec:
       targetPort: 15672
 ---
 # ============================================================
-# MongoDB
+# MongoDB StatefulSet
 # ============================================================
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mongodb
   namespace: messenger
@@ -170,6 +212,7 @@ metadata:
     app: mongodb
     app.kubernetes.io/part-of: messenger-backend
 spec:
+  serviceName: mongodb-headless
   replicas: 1
   selector:
     matchLabels:
@@ -203,10 +246,20 @@ spec:
             - name: mongodb-init-script
               mountPath: /docker-entrypoint-initdb.d/init-mongo.js
               subPath: init-mongo.js
+            - name: mongodb-storage
+              mountPath: /data/db
       volumes:
         - name: mongodb-init-script
           configMap:
             name: mongodb-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
@@ -217,6 +270,23 @@ metadata:
     app: mongodb
     app.kubernetes.io/part-of: messenger-backend
 spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: messenger
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  clusterIP: None
   selector:
     app: mongodb
   ports:

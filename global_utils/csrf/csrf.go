@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	jwt "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf/usecase"
+	jwt "github.com/qwerty268/messenger_backend/global_utils/csrf/usecase"
 )
 
 var jwtSecret = jwt.GenerateJWTSecret()

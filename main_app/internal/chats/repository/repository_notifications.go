@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
 )
 
 func (r *ChatRepositoryImpl) GetSendNotificationsForUser(ctx context.Context, chatId uuid.UUID, userId uuid.UUID) (bool, error) {
@@ -21,7 +21,7 @@ func (r *ChatRepositoryImpl) GetSendNotificationsForUser(ctx context.Context, ch
 	var sendNotifications bool
 
 	err = conn.QueryRow(ctx,
-		`SELECT 
+		`SELECT
 		send_notifications
 		FROM chat_user
 		WHERE chat_id = $1 AND user_id = $2`,

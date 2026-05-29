@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	chatModel "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
 )
 
 func (r *ChatRepositoryImpl) AddBranch(ctx context.Context, chatId uuid.UUID, messageID uuid.UUID) (chatModel.AddBranch, error) {
@@ -29,7 +29,7 @@ func (r *ChatRepositoryImpl) AddBranch(ctx context.Context, chatId uuid.UUID, me
 
 	_, err = tx.Exec(
 		ctx,
-		`INSERT INTO public.chat 
+		`INSERT INTO public.chat
 		(id,
 		chat_name,
 		chat_type_id
@@ -44,7 +44,7 @@ func (r *ChatRepositoryImpl) AddBranch(ctx context.Context, chatId uuid.UUID, me
 
 	_, err = tx.Exec(
 		ctx,
-		`UPDATE public.message 
+		`UPDATE public.message
 		SET branch_id = $2
 		WHERE id = $1;`,
 		messageID,
@@ -59,16 +59,16 @@ func (r *ChatRepositoryImpl) AddBranch(ctx context.Context, chatId uuid.UUID, me
 
 	_, err = tx.Exec(
 		ctx,
-		`INSERT INTO public.chat_user 
-			(id, 
-			user_role_id, 
-			chat_id, 
+		`INSERT INTO public.chat_user
+			(id,
+			user_role_id,
+			chat_id,
 			user_id)
-		SELECT 
+		SELECT
 			gen_random_uuid(),
-			(SELECT id FROM public.user_role WHERE value = 'none'), 
-			$2, 
-			cu.user_id 
+			(SELECT id FROM public.user_role WHERE value = 'none'),
+			$2,
+			cu.user_id
 		FROM public.chat_user cu
 		WHERE cu.chat_id = $1;`,
 		chatId,

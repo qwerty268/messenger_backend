@@ -13,7 +13,7 @@ import (
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
 )
 
 func WriteRequestDuration(start time.Time, met *prometheus.HistogramVec, method string) {

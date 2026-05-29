@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	chatModels "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/events"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	grpcChat "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/chat"
+	chatModels "github.com/qwerty268/messenger_backend/global_utils/events"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	grpcChat "github.com/qwerty268/messenger_backend/protos/gen/go/chat"
 )
 
 // ивент может быть либо изменение сущности чата, либо сообщение.

@@ -7,9 +7,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/proto"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
+	authv1 "github.com/qwerty268/messenger_backend/auth_service/internal/proto"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
 )
 
 //go:generate mockgen -source=api.go -destination=mocks/mocks.go

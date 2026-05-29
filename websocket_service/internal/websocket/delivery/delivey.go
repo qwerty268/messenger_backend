@@ -4,13 +4,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/middleware"
-	websocketUsecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/usecase"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	"github.com/qwerty268/messenger_backend/websocket_service/internal/middleware"
+	websocketUsecase "github.com/qwerty268/messenger_backend/websocket_service/internal/websocket/usecase"
 )
 
 var upgrader = websocket.Upgrader{
@@ -61,13 +62,22 @@ func NewWebsocket(usecase websocketUsecase.WebsocketUsecase) Webcosket {
 func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	log := logger.LoggerWithCtx(r.Context(), logger.Log)
-	user, ok := r.Context().Value(middleware.UserKey).(middleware.User)
-	if !ok {
-		responser.SendError(r.Context(), w, "Не переданы параметры", http.StatusInternalServerError)
-		return
-	}
 
-	log.Printf("Пользователь %v Открыл сокет", user.ID)
+	// Для нагрузочного тестирования используем фиксированного пользователя
+	var userID string
+	if r.URL.Path == "/api/startwebsocket-loadtest" {
+		// Используем ID пользователя user11 для нагрузочного тестирования
+		userID = "39a9aea0-d461-437d-b4eb-bf030a0efc80"
+		log.Printf("Нагрузочное тестирование: пользователь %v", userID)
+	} else {
+		user, ok := r.Context().Value(middleware.UserKey).(middleware.User)
+		if !ok {
+			responser.SendError(r.Context(), w, "Не переданы параметры", http.StatusInternalServerError)
+			return
+		}
+		userID = user.ID.String()
+		log.Printf("Пользователь %v Открыл сокет", user.ID)
+	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -80,7 +90,14 @@ func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	eventChannel := make(chan websocketUsecase.AnyEvent, 10)
 
-	err = h.usecase.InitBrokersForUser(user.ID, eventChannel)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		log.Errorf("Не удалось преобразовать userID в UUID: %v", err)
+		responser.SendError(r.Context(), w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.usecase.InitBrokersForUser(userUUID, eventChannel)
 	if err != nil {
 		log.Errorf("Не удалось иницировать брокеры для пользователя")
 		responser.SendError(r.Context(), w, "Нет нужных параметров", http.StatusInternalServerError)

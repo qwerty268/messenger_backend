@@ -7,8 +7,13 @@ metadata:
     app.kubernetes.io/name: auth-service
     app.kubernetes.io/part-of: messenger-backend
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: auth-service
@@ -38,7 +43,7 @@ spec:
               cpu: 100m
               memory: 128Mi
             limits:
-              cpu: 500m
+              cpu: 400m
               memory: 512Mi
           startupProbe:
             tcpSocket:

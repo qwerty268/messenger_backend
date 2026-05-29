@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf/models"
+	auth "github.com/qwerty268/messenger_backend/global_utils/csrf/models"
 )
 
 //go:generate mockgen -source=usecase.go -destination=mocks/mocks.go

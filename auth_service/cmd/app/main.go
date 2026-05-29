@@ -11,13 +11,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/api"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/repository"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/auth/usecase"
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/auth_service/internal/proto"
-	dbConfig "github.com/go-park-mail-ru/2024_2_EaglesDesigner/db/config"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/api"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/repository"
+	"github.com/qwerty268/messenger_backend/auth_service/internal/auth/usecase"
+	authv1 "github.com/qwerty268/messenger_backend/auth_service/internal/proto"
+	dbConfig "github.com/qwerty268/messenger_backend/db/config"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
 )
 
 func main() {

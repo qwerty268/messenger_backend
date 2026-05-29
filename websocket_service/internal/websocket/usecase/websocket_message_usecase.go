@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	messageModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/events"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
+	messageModel "github.com/qwerty268/messenger_backend/global_utils/events"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
 )
 
 type MessageEvent struct {
@@ -57,7 +57,7 @@ func (w *WebsocketUsecase) consumeMessages() {
 				continue
 			}
 			if _, ok := w.onlineChats[msg.Message.ChatId]; !ok {
-				w.initNewChatBroker(msg.Message.ChatId)
+				w.initNewChatBroker(msg.Message.ChatId, msg.Message.AuthorID)
 			}
 			w.sendMessage(msg)
 		}

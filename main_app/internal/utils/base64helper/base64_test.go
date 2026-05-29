@@ -1,30 +1,41 @@
 package base64helper
 
-// import (
-// 	"errors"
-// 	"fmt"
-// 	"io/ioutil"
-// 	"os"
-// 	"testing"
-// )
+import (
+	"testing"
+)
 
-// func TestSavePng(t *testing.T) {
-// 	bytes, err := ioutil.ReadFile("encoded-20241020143425.txt")
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		t.Fail()
-// 	}
-// 	id, err := SavePhotoBase64(string(bytes))
+func TestSavePng(t *testing.T) {
 
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		t.Fail()
-// 	}
+}
 
-// 	if _, err := os.Stat("../../../images/" + id.String() + ".png"); errors.Is(err, os.ErrNotExist) {
-// 		// path/to/whatever does not exist
-// 		t.Fail()
-// 	}
+func TestSavePng1(t *testing.T) {
 
-// 	os.Remove("../../../images/" + id.String() + ".png")
-// }
+}
+
+func TestSavePng3(t *testing.T) {
+
+}
+
+func TestSavePng4(t *testing.T) {
+
+}
+
+func TestSavePng5(t *testing.T) {
+
+}
+
+func TestSavePng6(t *testing.T) {
+
+}
+
+func TestSavePng7(t *testing.T) {
+
+}
+
+func TestSavePng8(t *testing.T) {
+
+}
+
+func TestSavePng9(t *testing.T) {
+
+}

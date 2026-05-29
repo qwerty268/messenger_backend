@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
+	chatModel "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
 )
 
 //go:generate mockgen -source=repository_interface.go -destination=mocks/mocks.go

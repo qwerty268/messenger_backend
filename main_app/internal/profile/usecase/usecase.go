@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/models"
-	multipartHepler "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/multipartHelper"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/main_app/internal/profile/models"
+	multipartHepler "github.com/qwerty268/messenger_backend/main_app/internal/utils/multipartHelper"
 )
 
 //go:generate mockgen -source=usecase.go -destination=mocks/mocks.go

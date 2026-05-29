@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
 )
 
 const (
@@ -47,12 +47,12 @@ func (r *MessageRepositoryImpl) GetFirstMessages(ctx context.Context, chatId uui
 	rows, err := conn.Query(context.Background(),
 		`SELECT
 	m.id,
-	CASE 
-        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000' 
-        ELSE m.author_id 
+	CASE
+        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000'
+        ELSE m.author_id
     END AS author_id,
 	m.message,
-	m.sent_at, 
+	m.sent_at,
 	m.is_redacted,
 	m.branch_id,
 	m.chat_id,
@@ -112,12 +112,12 @@ func (r *MessageRepositoryImpl) GetFirstMessages(ctx context.Context, chatId uui
 			log.Printf("поиск вложений сообщения %v", messages[i].MessageId)
 
 			payloadRows, err := conn.Query(context.Background(),
-				`select 
+				`select
 					mp.payload_path,
 					mp.filename,
 					mp.size,
-					(SELECT value FROM public.payload_type WHERE id = mp.payload_type) 
-				from public.message_payload mp 
+					(SELECT value FROM public.payload_type WHERE id = mp.payload_type)
+				from public.message_payload mp
 				where mp.message_id = $1;`,
 				messages[i].MessageId,
 			)
@@ -357,7 +357,7 @@ func (r *MessageRepositoryImpl) GetMessageById(ctx context.Context, messageId uu
 		`SELECT
 		m.author_id,
 		m.message,
-		m.sent_at, 
+		m.sent_at,
 		m.is_redacted,
 		m.chat_id,
 		mt.value,
@@ -408,12 +408,12 @@ func (r *MessageRepositoryImpl) GetMessageById(ctx context.Context, messageId uu
 		log.Printf("поиск вложений сообщения %v", messageModel.MessageId)
 
 		payloadRows, err := conn.Query(context.Background(),
-			`select 
+			`select
 				mp.payload_path,
 				mp.filename,
 				mp.size,
-				(SELECT value FROM public.payload_type WHERE id = mp.payload_type) 
-			from public.message_payload mp 
+				(SELECT value FROM public.payload_type WHERE id = mp.payload_type)
+			from public.message_payload mp
 			where mp.message_id = $1;`,
 			messageModel.MessageId,
 		)
@@ -467,7 +467,7 @@ func (r *MessageRepositoryImpl) SearchMessagesWithQuery(ctx context.Context, cha
 	m.id,
 	m.author_id,
 	m.message,
-	m.sent_at, 
+	m.sent_at,
 	m.is_redacted
 	FROM public.message AS m
 	WHERE m.chat_id = $1 AND lower(m.message) LIKE lower($2)
@@ -519,12 +519,12 @@ func (r *MessageRepositoryImpl) GetLastMessage(chatId uuid.UUID) (models.Message
 	row := conn.QueryRow(context.Background(),
 		`SELECT
 	m.id,
-	CASE 
-        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000' 
-        ELSE m.author_id 
+	CASE
+        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000'
+        ELSE m.author_id
     END AS author_id,
 	m.message,
-	m.sent_at, 
+	m.sent_at,
 	m.is_redacted,
 	mt.value
 	FROM public.message AS m
@@ -566,12 +566,12 @@ func (r *MessageRepositoryImpl) GetLastMessage(chatId uuid.UUID) (models.Message
 		log.Printf("поиск вложений сообщения %v", messageModel.MessageId)
 
 		payloadRows, err := conn.Query(context.Background(),
-			`select 
+			`select
 				mp.payload_path,
 				mp.filename,
 				mp.size,
-				(SELECT value FROM public.payload_type WHERE id = mp.payload_type) 
-			from public.message_payload mp 
+				(SELECT value FROM public.payload_type WHERE id = mp.payload_type)
+			from public.message_payload mp
 			where mp.message_id = $1;`,
 			messageModel.MessageId,
 		)
@@ -625,12 +625,12 @@ func (r *MessageRepositoryImpl) GetMessagesAfter(ctx context.Context, chatId uui
 	rows, err := conn.Query(ctx,
 		`SELECT
 	m.id,
-	CASE 
-        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000' 
-        ELSE m.author_id 
+	CASE
+        WHEN mt.value = 'informational' THEN '00000000-0000-0000-0000-000000000000'
+        ELSE m.author_id
     END AS author_id,
 	m.message,
-	m.sent_at, 
+	m.sent_at,
 	m.is_redacted,
 	mt.value,
 	m.sticker_path
@@ -685,12 +685,12 @@ func (r *MessageRepositoryImpl) GetMessagesAfter(ctx context.Context, chatId uui
 			log.Printf("поиск вложений сообщения %v", messages[i].MessageId)
 
 			payloadRows, err := conn.Query(context.Background(),
-				`select 
+				`select
 					mp.payload_path,
 					mp.filename,
 					mp.size,
-					(SELECT value FROM public.payload_type WHERE id = mp.payload_type) 
-				from public.message_payload mp 
+					(SELECT value FROM public.payload_type WHERE id = mp.payload_type)
+				from public.message_payload mp
 				where mp.message_id = $1;`,
 				messages[i].MessageId,
 			)
@@ -743,11 +743,11 @@ func (r *MessageRepositoryImpl) GetPayload(ctx context.Context, chatId uuid.UUID
 	defer conn.Release()
 
 	payloadRows, err := conn.Query(context.Background(),
-		`SELECT 
+		`SELECT
 			mp.payload_path,
 			mp.filename,
 			mp.size,
-			(SELECT value FROM public.payload_type WHERE id = mp.payload_type) 
+			(SELECT value FROM public.payload_type WHERE id = mp.payload_type)
 		FROM message m
 		JOIN message_payload mp ON mp.message_id = m.id
 		WHERE m.chat_id = $1;`,

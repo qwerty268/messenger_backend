@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/models"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/main_app/internal/profile/models"
 )
 
 type Repository struct {
@@ -37,7 +37,7 @@ func (r *Repository) GetProfileByUsername(ctx context.Context, id uuid.UUID) (mo
 	row := conn.QueryRow(
 		ctx,
 		`SELECT
-			name, 
+			name,
 			birthdate,
 			bio,
 			avatar_path

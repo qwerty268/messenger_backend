@@ -17,8 +17,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/gridfs"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/models"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/main_app/internal/files/models"
 )
 
 type Repository struct {
@@ -224,7 +224,7 @@ func (r *Repository) GetStickerPack(ctx context.Context, packID string) (models.
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT 
+		`SELECT
 			s.sticker_path,
 			sp.photo
 		FROM sticker_sticker_pack ssp
@@ -262,7 +262,7 @@ func (r *Repository) GetStickerPacks(ctx context.Context) (models.StickerPacks, 
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT 
+		`SELECT
 			id,
 			photo
 		FROM sticker_pack;`,

@@ -9,9 +9,9 @@ import (
 	http "net/http"
 	reflect "reflect"
 
-	model "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
+	model "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
 )
 
 // MockChatUsecase is a mock of ChatUsecase interface.

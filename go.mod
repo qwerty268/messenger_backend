@@ -1,4 +1,4 @@
-module github.com/go-park-mail-ru/2024_2_EaglesDesigner
+module github.com/qwerty268/messenger_backend
 
 go 1.23.1
 
@@ -30,6 +30,12 @@ require (
 )
 
 require (
+	github.com/rs/zerolog v1.20.0 // indirect
+	github.com/streadway/amqp v1.0.0 // indirect
+)
+
+require (
+	git.canopsis.net/canopsis/go-engines v0.0.0-20210611151150-d841f61f6bb1
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

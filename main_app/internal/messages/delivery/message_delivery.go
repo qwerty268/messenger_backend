@@ -12,14 +12,14 @@ import (
 	"github.com/mailru/easyjson"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	customerror "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/custom_error"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/usecase"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	customerror "github.com/qwerty268/messenger_backend/main_app/internal/chats/custom_error"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/usecase"
+	"github.com/qwerty268/messenger_backend/main_app/internal/utils/validator"
 )
 
 var noPerm *customerror.NoPermissionError = &customerror.NoPermissionError{User: "Alice", Area: "секретная зона"}

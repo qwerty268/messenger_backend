@@ -14,13 +14,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/models"
-	multiparthelper "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/multipartHelper"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/profile/models"
+	multiparthelper "github.com/qwerty268/messenger_backend/main_app/internal/utils/multipartHelper"
+	"github.com/qwerty268/messenger_backend/main_app/internal/utils/validator"
 )
 
 const (

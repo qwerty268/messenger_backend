@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	errGroup "golang.org/x/sync/errgroup"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	chatModel "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
 )
 
 type ChatRepositoryImpl struct {
@@ -207,9 +207,9 @@ func (r *ChatRepositoryImpl) GetChatType(ctx context.Context, chatId uuid.UUID) 
 	var chatType string
 
 	err = conn.QueryRow(ctx,
-		`SELECT ct.value 
+		`SELECT ct.value
 		FROM chat ch
-		JOIN chat_type ct ON ct.id = ch.chat_type_id 
+		JOIN chat_type ct ON ct.id = ch.chat_type_id
 		WHERE ch.id = $1;`,
 		chatId,
 	).Scan(&chatType)
@@ -420,14 +420,14 @@ func (r *ChatRepositoryImpl) GetUsersFromChat(ctx context.Context, chatId uuid.U
 	log.Printf("начато получение пользователей из чата: %v", chatId)
 
 	rows, err := conn.Query(ctx,
-		`SELECT 
+		`SELECT
 			u.id,
 			u.username,
 			u.name,
 			u.avatar_path,
 			ch.user_role_id
 		FROM public.chat_user AS ch
-		JOIN public."user" u ON ch.user_id = u.id 
+		JOIN public."user" u ON ch.user_id = u.id
 		WHERE chat_id = $1;`,
 		chatId,
 	)
@@ -535,9 +535,9 @@ func (r *ChatRepositoryImpl) SearchUserChats(ctx context.Context, userId uuid.UU
 		FROM chat_user AS cu
 		JOIN chat AS c ON c.id = cu.chat_id
 		JOIN chat_type AS ch ON ch.id = c.chat_type_id
-		WHERE 
-			cu.user_id = $1 AND 
-			ch.value <> 'branch' AND 
+		WHERE
+			cu.user_id = $1 AND
+			ch.value <> 'branch' AND
 			(POSITION(LOWER($2) IN LOWER(c.chat_name)) > 0 OR POSITION(LOWER($2) IN LOWER(c.chat_link_name)) > 0);`,
 		userId,
 		keyWord,
@@ -588,14 +588,14 @@ func (r *ChatRepositoryImpl) SearchGlobalChats(ctx context.Context, userId uuid.
 	log.Debugln("Соединение с бд установлено")
 
 	rows, err := conn.Query(ctx,
-		`SELECT 
+		`SELECT
 			ch.id,
 			ch.chat_name,
 			ch.value,
 			ch.avatar_path,
 			ch.chat_link_name
 		FROM (
-			SELECT 
+			SELECT
 				c.id,
 				c.chat_name,
 				ch.value,
@@ -603,14 +603,14 @@ func (r *ChatRepositoryImpl) SearchGlobalChats(ctx context.Context, userId uuid.
 				c.chat_link_name
 			FROM public.chat c
 			JOIN public.chat_type ch ON ch.id = c.chat_type_id
-			WHERE  
-				ch.value = 'channel' AND 
+			WHERE
+				ch.value = 'channel' AND
 				(POSITION(LOWER($2) IN LOWER(c.chat_name)) > 0 OR POSITION(LOWER($2) IN LOWER(c.chat_link_name)) > 0)
 		) AS ch
 		WHERE ch.id NOT IN (
 			SELECT c.id
 			FROM public.chat_user cu
-			JOIN public.chat c ON cu.chat_id = c.id 
+			JOIN public.chat c ON cu.chat_id = c.id
 			WHERE cu.user_id = $1
 		);`,
 		userId,

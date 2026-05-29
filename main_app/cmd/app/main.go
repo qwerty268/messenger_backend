@@ -22,29 +22,30 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	dbConfig "github.com/go-park-mail-ru/2024_2_EaglesDesigner/db/config"
-	_ "github.com/go-park-mail-ru/2024_2_EaglesDesigner/docs"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	authDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/delivery"
-	chatController "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/delivery"
-	chatRepository "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository"
-	chatService "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/usecase"
-	contactsDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/delivery"
-	contactsRepo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/repository"
-	contactsUC "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/usecase"
-	filesDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/delivery"
-	filesRepo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/repository"
-	filesUC "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/usecase"
-	messageDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/delivery"
-	messageRepository "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/repository"
-	messageUsecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/usecase"
-	profileDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/delivery"
-	profileRepo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/repository"
-	profileUC "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/profile/usecase"
-	uploadsDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/uploads/delivery"
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
+	dbConfig "github.com/qwerty268/messenger_backend/db/config"
+	_ "github.com/qwerty268/messenger_backend/docs"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	authDelivery "github.com/qwerty268/messenger_backend/main_app/internal/auth/delivery"
+	chatController "github.com/qwerty268/messenger_backend/main_app/internal/chats/delivery"
+	chatRepository "github.com/qwerty268/messenger_backend/main_app/internal/chats/repository"
+	chatService "github.com/qwerty268/messenger_backend/main_app/internal/chats/usecase"
+	contactsDelivery "github.com/qwerty268/messenger_backend/main_app/internal/contacts/delivery"
+	contactsRepo "github.com/qwerty268/messenger_backend/main_app/internal/contacts/repository"
+	contactsUC "github.com/qwerty268/messenger_backend/main_app/internal/contacts/usecase"
+	filesDelivery "github.com/qwerty268/messenger_backend/main_app/internal/files/delivery"
+	filesRepo "github.com/qwerty268/messenger_backend/main_app/internal/files/repository"
+	filesUC "github.com/qwerty268/messenger_backend/main_app/internal/files/usecase"
+	"github.com/qwerty268/messenger_backend/main_app/internal/loadtest"
+	messageDelivery "github.com/qwerty268/messenger_backend/main_app/internal/messages/delivery"
+	messageRepository "github.com/qwerty268/messenger_backend/main_app/internal/messages/repository"
+	messageUsecase "github.com/qwerty268/messenger_backend/main_app/internal/messages/usecase"
+	profileDelivery "github.com/qwerty268/messenger_backend/main_app/internal/profile/delivery"
+	profileRepo "github.com/qwerty268/messenger_backend/main_app/internal/profile/repository"
+	profileUC "github.com/qwerty268/messenger_backend/main_app/internal/profile/usecase"
+	uploadsDelivery "github.com/qwerty268/messenger_backend/main_app/internal/uploads/delivery"
+	authv1 "github.com/qwerty268/messenger_backend/protos/gen/go/authv1"
 )
 
 // swag init
@@ -190,21 +191,7 @@ func main() {
 		})
 	})
 
-	router.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "http://localhost")
-			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-			// Обработка предзапросов (OPTIONS)
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	})
 
 	router.HandleFunc("/", auth.Authorize(auth.AuthHandler)).Methods("GET", "OPTIONS")
 	router.PathPrefix("/docs/").HandlerFunc(httpSwagger.WrapHandler)
@@ -252,6 +239,10 @@ func main() {
 	router.Handle("/metrics", promhttp.Handler())
 	metric.RecordMetrics()
 
+	// нагрузочное тестирование
+	loadtest.InitRabbitMQ(ch)
+	loadtest.RegisterRoutes(router)
+
 	// хз чо это
 	http.HandleFunc("/", httpSwagger.Handler())
 
@@ -265,10 +256,10 @@ func startMainServer(router *mux.Router) {
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
 			"https://patefon.site",
-			"http://localhost",
-			"https://localhost",
-			"https://localhost:8083",
+			"http://localhost:3001",
+			"https://localhost:3001",
 			"http://localhost:8083",
+			"https://localhost:8083",
 			"http://localhost:9090",
 			"https://localhost:9090",
 			"http://127.0.0.1:9090",

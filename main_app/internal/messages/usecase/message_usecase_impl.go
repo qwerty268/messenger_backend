@@ -10,15 +10,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	socketUsecase "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/events"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	jwt "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	customerror "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/custom_error"
-	chatRepository "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository"
-	filesModels "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/files/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/repository"
+	socketUsecase "github.com/qwerty268/messenger_backend/global_utils/events"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	jwt "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	customerror "github.com/qwerty268/messenger_backend/main_app/internal/chats/custom_error"
+	chatRepository "github.com/qwerty268/messenger_backend/main_app/internal/chats/repository"
+	filesModels "github.com/qwerty268/messenger_backend/main_app/internal/files/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/repository"
 )
 
 type Method = string

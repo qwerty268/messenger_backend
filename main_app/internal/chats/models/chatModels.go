@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
+	"github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
 )
 
 // @Schema.

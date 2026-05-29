@@ -47,7 +47,7 @@ CREATE TABLE public.chat_user (
     user_role_id integer NOT NULL,
     chat_id uuid NOT NULL,
     user_id uuid NOT NULL,
-    send_notifications boolean DEFAULT true NOT NULL 
+    send_notifications boolean DEFAULT true NOT NULL
 );
 
 
@@ -239,15 +239,15 @@ ALTER TABLE ONLY public.chat_user
 
 ALTER TABLE ONLY public.message
     ADD CONSTRAINT branch_id_fk_messages_chat_id_pk_chat FOREIGN KEY (branch_id) REFERENCES public.chat(id)
-    ON DELETE CASCADE;  
+    ON DELETE CASCADE;
 
-   
+
 --
 -- Name: user uniq_branch_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.message
-    ADD CONSTRAINT uniq_branch_id UNIQUE (branch_id); 
+    ADD CONSTRAINT uniq_branch_id UNIQUE (branch_id);
 
 
 --
@@ -256,20 +256,20 @@ ALTER TABLE ONLY public.message
 
 ALTER TABLE ONLY public.contact
     ADD CONSTRAINT contact_pkey PRIMARY KEY (id);
-   
-   
+
+
 --
 -- Name: contact unique_user_contact_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
---  
- 
+--
+
 ALTER TABLE ONLY public.contact
 	ADD CONSTRAINT unique_user_contact_pair UNIQUE (user_id, contact_id);
 
 
 --
 -- Name: contact user_contact_not_equal; Type: CONSTRAINT; Schema: public; Owner: postgres
---  
- 
+--
+
 ALTER TABLE ONLY public.contact
 	ADD CONSTRAINT user_contact_not_equal CHECK (user_id <> contact_id);
 
@@ -388,7 +388,7 @@ ALTER TABLE ONLY public.contact
 ALTER TABLE ONLY public.chat_user
     ADD CONSTRAINT user_role_id_fk_chat_users_chat_id_pk_user_roles FOREIGN KEY (user_role_id) REFERENCES public.user_role(id);
 
-   
+
 CREATE TABLE public.chat_branch
 (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -431,7 +431,7 @@ INSERT INTO  public.user_role ( value) VALUES
 --
 -- Insert test data to user
 --
-INSERT INTO message_type (value) VALUES 
+INSERT INTO message_type (value) VALUES
     ('default'),
     ('informational'),
     ('with_payload'),
@@ -491,7 +491,7 @@ INSERT INTO public."user" (id, username, version, password, name, bio, birthdate
 -- Insert test data to contacts
 --
 
-INSERT INTO contact (id, user_id, contact_id) VALUES 
+INSERT INTO contact (id, user_id, contact_id) VALUES
     ('a0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user22')),
     ('b0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user33')),
     ('c0a0aaa0-d461-437d-b4eb-bf030a0efc80', (SELECT id FROM public."user" WHERE username = 'user11'), (SELECT id FROM public."user" WHERE username = 'user44')),
@@ -536,9 +536,9 @@ INSERT INTO message (id, chat_id, author_id, sticker_path, message_type_id, sent
     ('a9a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', '/files/6762d4545803e3d181d0ecc7', 4, '1999-12-31 00:00:00.881 +0300');
 
 INSERT INTO message (id, chat_id, author_id, message, message_type_id, sent_at) VALUES
-    ('a8a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'Привет! 🎉 
+    ('a8a9aea0-d461-437d-b4eb-bf030a0efc80', 'a1a9aea0-d461-437d-b4eb-bf030a0efc80', 'a0a0aaa0-d461-437d-b4eb-bf030a0efc80', 'Привет! 🎉
 
-Добро пожаловать в Патефон! Мы рады видеть тебя здесь. Это пространство для общения, обмена идеями и просто хорошего времяпрепровождения. 
+Добро пожаловать в Патефон! Мы рады видеть тебя здесь. Это пространство для общения, обмена идеями и просто хорошего времяпрепровождения.
 
 Здесь ты сможешь находить новых друзей, участвовать в интересных беседах и делиться своими увлечениями. Если у тебя возникнут вопросы или потребуется помощь, не стесняйся обращаться к нашей команде поддержки.
 
@@ -549,7 +549,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO public.chat_user (user_role_id, chat_id, user_id)
     VALUES (1, (SELECT id FROM public.chat WHERE chat_name = 'patefon'), NEW.id);
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

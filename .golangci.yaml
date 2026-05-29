@@ -18,7 +18,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/go-park-mail-ru/2024_2_EaglesDesigner)
+      - prefix(github.com/qwerty268/messenger_backend)
 
   lll:
     line-length: 200

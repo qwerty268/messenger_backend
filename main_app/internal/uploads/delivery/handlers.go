@@ -5,7 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
 )
 
 type Delivery struct{}

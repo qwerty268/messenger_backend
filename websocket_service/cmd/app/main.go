@@ -11,10 +11,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
-	authDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/middleware"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/delivery"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/usecase"
+	"github.com/qwerty268/messenger_backend/protos/gen/go/authv1"
+	authDelivery "github.com/qwerty268/messenger_backend/websocket_service/internal/middleware"
+	"github.com/qwerty268/messenger_backend/websocket_service/internal/websocket/delivery"
+	"github.com/qwerty268/messenger_backend/websocket_service/internal/websocket/usecase"
 )
 
 const (
@@ -63,6 +63,7 @@ func main() {
 	})
 
 	router.HandleFunc("/startwebsocket", auth.Authorize(socketDelivery.HandleConnection))
+	router.HandleFunc("/startwebsocket-loadtest", socketDelivery.HandleConnection) // Без аутентификации для нагрузочного тестирования
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())
 

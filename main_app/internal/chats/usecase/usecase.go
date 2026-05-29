@@ -16,16 +16,16 @@ import (
 	"golang.org/x/net/html"
 	errGroup "golang.org/x/sync/errgroup"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/metric"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	customerror "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/custom_error"
-	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
-	chatlist "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository"
-	messageModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
-	message "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/usecase"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/utils/validator"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/global_utils/metric"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	customerror "github.com/qwerty268/messenger_backend/main_app/internal/chats/custom_error"
+	chatModel "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
+	chatlist "github.com/qwerty268/messenger_backend/main_app/internal/chats/repository"
+	messageModel "github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
+	message "github.com/qwerty268/messenger_backend/main_app/internal/messages/usecase"
+	"github.com/qwerty268/messenger_backend/main_app/internal/utils/validator"
 )
 
 func init() {
