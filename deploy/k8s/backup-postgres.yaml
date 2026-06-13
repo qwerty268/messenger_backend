@@ -1,0 +1,99 @@
+---
+# ============================================================
+# PostgreSQL Backup CronJob
+# ============================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: messenger
+  labels:
+    app: postgres-backup
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  schedule: "0 2 * * *"  # Ежедневно в 02:00 UTC
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: postgres-backup
+              image: postgres:15-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  # Формирование имени файла бэкапа с датой
+                  BACKUP_FILE="postgres-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+
+                  echo "Starting PostgreSQL backup at $(date)"
+
+                  # Создание бэкапа и сжатие
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
+                    -h "$POSTGRES_HOST" \
+                    -U "$POSTGRES_USER" \
+                    -d "$POSTGRES_DB" \
+                    --clean \
+                    --if-exists \
+                    --format=plain \
+                    --no-owner \
+                    --no-acl | gzip > "/backup/$BACKUP_FILE"
+
+                  echo "Backup completed: $BACKUP_FILE"
+
+                  # Удаление бэкапов старше 7 дней
+                  find /backup -name "postgres-backup-*.sql.gz" -type f -mtime +7 -delete
+
+                  echo "Old backups cleaned up"
+                  echo "Backup process finished at $(date)"
+
+                  # Вывод информации о текущих бэкапах
+                  ls -lh /backup/
+              env:
+                - name: POSTGRES_HOST
+                  value: postgres
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: messenger-secrets
+                      key: POSTGRES_USER
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: messenger-secrets
+                      key: POSTGRES_PASSWORD
+                - name: POSTGRES_DB
+                  valueFrom:
+                    configMapKeyRef:
+                      name: messenger-config
+                      key: POSTGRES_DB
+              volumeMounts:
+                - name: postgres-backup-storage
+                  mountPath: /backup
+          volumes:
+            - name: postgres-backup-storage
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+---
+# ============================================================
+# PVC для хранения бэкапов PostgreSQL
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: messenger
+  labels:
+    app: postgres-backup
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

@@ -8,10 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-	models0 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/models"
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
+	models "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+	models0 "github.com/qwerty268/messenger_backend/main_app/internal/messages/models"
 )
 
 // MockMessageUsecase is a mock of MessageUsecase interface.

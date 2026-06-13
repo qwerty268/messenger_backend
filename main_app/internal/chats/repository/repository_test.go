@@ -5,7 +5,7 @@ package repository
 // 	"log"
 // 	"testing"
 
-// 	model "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
+// 	model "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
 // 	"github.com/google/uuid"
 // 	"github.com/jackc/pgx/v4/pgxpool"
 // )

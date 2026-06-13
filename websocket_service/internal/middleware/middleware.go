@@ -6,11 +6,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/responser"
-	authv1 "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+
+	"github.com/qwerty268/messenger_backend/global_utils/csrf"
+	"github.com/qwerty268/messenger_backend/global_utils/responser"
+	authv1 "github.com/qwerty268/messenger_backend/protos/gen/go/authv1"
 )
 
 type Delivery struct {
@@ -80,7 +81,7 @@ func (d *Delivery) setTokens(w http.ResponseWriter, r *http.Request, username st
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 

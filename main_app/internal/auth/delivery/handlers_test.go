@@ -7,9 +7,9 @@ package delivery_test
 // 	"net/http/httptest"
 // 	"testing"
 
-// 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/delivery"
-// 	mock_delivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/delivery/mocks"
-// 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
+// 	"github.com/qwerty268/messenger_backend/main_app/internal/auth/delivery"
+// 	mock_delivery "github.com/qwerty268/messenger_backend/main_app/internal/auth/delivery/mocks"
+// 	"github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
 // 	"github.com/golang/mock/gomock"
 // 	"github.com/stretchr/testify/assert"
 // )

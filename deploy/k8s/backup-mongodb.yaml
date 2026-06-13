@@ -1,0 +1,95 @@
+---
+# ============================================================
+# MongoDB Backup CronJob
+# ============================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongodb-backup
+  namespace: messenger
+  labels:
+    app: mongodb-backup
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  schedule: "0 3 * * *"  # Ежедневно в 03:00 UTC
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mongodb-backup
+              image: mongo:6
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  # Формирование имени файла бэкапа с датой
+                  BACKUP_FILE="mongodb-backup-$(date +%Y%m%d-%H%M%S).gz"
+
+                  echo "Starting MongoDB backup at $(date)"
+
+                  # Создание бэкапа и сжатие
+                  mongodump \
+                    --host="$MONGODB_HOST" \
+                    --port="$MONGODB_PORT" \
+                    --username="$MONGODB_USERNAME" \
+                    --password="$MONGODB_PASSWORD" \
+                    --authenticationDatabase=admin \
+                    --db="$MONGODB_DATABASE" \
+                    --archive="/backup/$BACKUP_FILE" \
+                    --gzip
+
+                  echo "Backup completed: $BACKUP_FILE"
+
+                  # Удаление бэкапов старше 7 дней
+                  find /backup -name "mongodb-backup-*.gz" -type f -mtime +7 -delete
+
+                  echo "Old backups cleaned up"
+                  echo "Backup process finished at $(date)"
+
+                  # Вывод информации о текущих бэкапах
+                  ls -lh /backup/
+              env:
+                - name: MONGODB_HOST
+                  value: mongodb
+                - name: MONGODB_PORT
+                  value: "27017"
+                - name: MONGODB_USERNAME
+                  value: root
+                - name: MONGODB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: messenger-secrets
+                      key: RABBITMQ_PASSWORD
+                - name: MONGODB_DATABASE
+                  value: files
+              volumeMounts:
+                - name: mongodb-backup-storage
+                  mountPath: /backup
+          volumes:
+            - name: mongodb-backup-storage
+              persistentVolumeClaim:
+                claimName: mongodb-backup-pvc
+---
+# ============================================================
+# PVC для хранения бэкапов MongoDB
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-backup-pvc
+  namespace: messenger
+  labels:
+    app: mongodb-backup
+    app.kubernetes.io/part-of: messenger-backend
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

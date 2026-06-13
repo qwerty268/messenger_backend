@@ -5,18 +5,17 @@ import (
 	"net"
 	"strconv"
 
-	chatModels "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/events"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	grpcChat "github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/chat"
-
+	"github.com/google/uuid"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
+	chatModels "github.com/qwerty268/messenger_backend/global_utils/events"
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	grpcChat "github.com/qwerty268/messenger_backend/protos/gen/go/chat"
 )
 
-// ивент может быть либо изменение сущности чата, либо сообщение
+// ивент может быть либо изменение сущности чата, либо сообщение.
 type AnyEvent struct {
 	TypeOfEvent string
 	Event       interface{}
@@ -28,7 +27,10 @@ type ChatInfo struct {
 }
 
 type WebsocketUsecase struct {
-	ch *amqp.Channel
+	// отдельный канал для consumer'а сообщений
+	chMessages *amqp.Channel
+	// отдельный канал для consumer'а чатов
+	chChats *amqp.Channel
 	// мапа с чатами и каналами для ивентов по чатам
 	onlineChats map[uuid.UUID]ChatInfo
 	// мапа с онлайн пользователями и
@@ -36,32 +38,45 @@ type WebsocketUsecase struct {
 	chatRepository grpcChat.ChatServiceClient
 }
 
-func NewWebsocketUsecase(ch *amqp.Channel, host string, port int) *WebsocketUsecase {
-	_, err := ch.QueueDeclare(
-		"message", // name
-		false,     // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
-	)
+func NewWebsocketUsecase(conn *amqp.Connection, host string, port int) *WebsocketUsecase {
+	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+
+	// Объявляем очереди на отдельном временном канале.
+	declareCh, err := conn.Channel()
 	if err != nil {
-		log := logger.LoggerWithCtx(context.Background(), logger.Log)
-		log.Fatalf("failed to declare a queue. Error: %s", err)
+		log.Fatalf("failed to open declare channel. Error: %s", err)
 	}
 
-	_, err = ch.QueueDeclare(
-		"chat", // name
-		false,  // durable
-		false,  // delete when unused
-		false,  // exclusive
-		false,  // no-wait
-		nil,    // arguments
-	)
-	if err != nil {
-		log := logger.LoggerWithCtx(context.Background(), logger.Log)
-		log.Fatalf("failed to declare a queue. Error: %s", err)
+	if _, err := declareCh.QueueDeclare("message", false, false, false, false, nil); err != nil {
+		log.Fatalf("failed to declare 'message' queue. Error: %s", err)
 	}
+	log.Infof("queue 'message' declared")
+
+	if _, err := declareCh.QueueDeclare("chat", false, false, false, false, nil); err != nil {
+		log.Fatalf("failed to declare 'chat' queue. Error: %s", err)
+	}
+	log.Infof("queue 'chat' declared")
+
+	if err := declareCh.Close(); err != nil {
+		log.Warnf("failed to close declare channel: %s", err)
+	}
+
+	// Создаем отдельный канал для consumer'а сообщений.
+	// RabbitMQ (AMQP 0-9-1) не позволяет регистрировать несколько consumer'ов
+	// с пустым/одинаковым consumer-tag на одном канале, поэтому для каждого
+	// consumer'а используется свой канал.
+	chMessages, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("failed to open messages channel. Error: %s", err)
+	}
+	log.Infof("messages channel opened")
+
+	// Создаем отдельный канал для consumer'а чатов
+	chChats, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("failed to open chats channel. Error: %s", err)
+	}
+	log.Infof("chats channel opened")
 
 	grpcAddress := net.JoinHostPort(host, strconv.Itoa(port))
 	// Создаем клиент
@@ -75,8 +90,44 @@ func NewWebsocketUsecase(ch *amqp.Channel, host string, port int) *WebsocketUsec
 	// gRPC-клиент сервера Auth
 	grpcClient := grpcChat.NewChatServiceClient(cc)
 
+	// Подписываемся на события закрытия — это поможет понять, по какой причине
+	// AMQP-канал/соединение закрывается извне.
+	connCloseCh := make(chan *amqp.Error, 1)
+	conn.NotifyClose(connCloseCh)
+	go func() {
+		err, ok := <-connCloseCh
+		if !ok {
+			log.Warnf("amqp connection close notifier exited")
+			return
+		}
+		log.Errorf("amqp CONNECTION closed: %+v", err)
+	}()
+
+	msgCloseCh := make(chan *amqp.Error, 1)
+	chMessages.NotifyClose(msgCloseCh)
+	go func() {
+		err, ok := <-msgCloseCh
+		if !ok {
+			log.Warnf("messages channel close notifier exited")
+			return
+		}
+		log.Errorf("messages CHANNEL closed: %+v", err)
+	}()
+
+	chatCloseCh := make(chan *amqp.Error, 1)
+	chChats.NotifyClose(chatCloseCh)
+	go func() {
+		err, ok := <-chatCloseCh
+		if !ok {
+			log.Warnf("chats channel close notifier exited")
+			return
+		}
+		log.Errorf("chats CHANNEL closed: %+v", err)
+	}()
+
 	socket := &WebsocketUsecase{
-		ch:             ch,
+		chMessages:     chMessages,
+		chChats:        chChats,
 		onlineChats:    map[uuid.UUID]ChatInfo{},
 		onlineUsers:    map[uuid.UUID]chan AnyEvent{},
 		chatRepository: grpcClient,

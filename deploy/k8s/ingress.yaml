@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: messenger-ingress
+  namespace: messenger
+  labels:
+    app.kubernetes.io/name: messenger-ingress
+    app.kubernetes.io/part-of: messenger-backend
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/websocket-services: "websocket-service"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: messenger.local
+      http:
+        paths:
+          - path: /startwebsocket
+            pathType: Prefix
+            backend:
+              service:
+                name: websocket-service
+                port:
+                  number: 8083
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: main-app
+                port:
+                  number: 8080

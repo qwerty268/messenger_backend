@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/csrf/models"
+	auth "github.com/qwerty268/messenger_backend/global_utils/csrf/models"
 )
 
 //go:generate mockgen -source=usecase.go -destination=mocks/mocks.go
@@ -101,7 +101,6 @@ func GenerateJWTSecret() []byte {
 		log.Fatalf("Ошибка при генерации jwtSecret: %v", err)
 	}
 	return secret
-
 }
 
 func GeneratorJWT(header string, payload string, secret []byte) (string, error) {
@@ -114,25 +113,6 @@ func GeneratorJWT(header string, payload string, secret []byte) (string, error) 
 	jwt := header + "." + payload + "." + signatureEncoded
 
 	return jwt, nil
-}
-
-func checkJWT(token string) (bool, error) {
-	jwt := strings.Split(token, ".")
-	if len(jwt) != 3 {
-		return false, errors.New("invalid token")
-	}
-	header := jwt[0]
-	payload := jwt[1]
-	signature := jwt[2]
-
-	newToken, err := GeneratorJWT(header, payload, jwtSecret)
-	if err != nil {
-		return false, err
-	}
-
-	newSignature := strings.Split(newToken, ".")[2]
-
-	return signature == newSignature, nil
 }
 
 func parseCookies(cookies []*http.Cookie) (string, error) {

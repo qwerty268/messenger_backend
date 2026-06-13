@@ -7,11 +7,11 @@ package usecase_test
 // 	"testing"
 
 // 	mock_amqp "git.canopsis.net/canopsis/go-engines/mocks/lib/amqp"
-// 	auth "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/auth/models"
-// 	chatModel "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/models"
-// 	chatMockRepo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/repository/mocks"
-// 	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/chats/usecase"
-// 	messagesMockRepo "github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/messages/repository/mocks"
+// 	auth "github.com/qwerty268/messenger_backend/main_app/internal/auth/models"
+// 	chatModel "github.com/qwerty268/messenger_backend/main_app/internal/chats/models"
+// 	chatMockRepo "github.com/qwerty268/messenger_backend/main_app/internal/chats/repository/mocks"
+// 	"github.com/qwerty268/messenger_backend/main_app/internal/chats/usecase"
+// 	messagesMockRepo "github.com/qwerty268/messenger_backend/main_app/internal/messages/repository/mocks"
 // 	"github.com/golang/mock/gomock"
 // 	"github.com/google/uuid"
 // )

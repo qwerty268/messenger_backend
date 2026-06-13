@@ -12,12 +12,11 @@ jobs:
     name: linter
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v4
-        with:
-          go-version: 1.19
-      - uses: actions/checkout@v4
-      - name: run golangci-lint
-        run: 	golangci-lint run
+    - uses: actions/checkout@v4
+    - name: Lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.60
           
   test:
     needs: linter
@@ -27,7 +26,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.19
+        go-version: '1.23.1'
 
     - name: tests
       run: go test ./...
@@ -39,12 +38,15 @@ jobs:
       - name: rebuild docker-compose
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }} 
+          host: 212.233.98.59 
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd 2024_2_EaglesDesigners/
-            git pull
-            make up
+            sudo git pull
+            sudo chown 999:999 ./log
+            sudo chmod 700 ./log
+            sudo docker-compose down
+            sudo docker-compose up --build -d
 
 

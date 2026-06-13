@@ -1,18 +1,29 @@
-# Start from a Debian image with the latest version of Go installed
-# and a workspace (GOPATH) configured at /go.
-FROM golang
+# Stage 1: builder
+FROM golang:1.23-alpine AS builder
 
-COPY ./go.mod ./go.sum ./
+WORKDIR /build
 
-COPY ./ ./
+# Копируем go.mod и go.sum из корня репозитория и скачиваем зависимости
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Build the outyet command inside the container.
-# (You may fetch or manage dependencies here,
-# either manually or with a tool like "godep".)
+# Копируем весь исходный код
+COPY . .
 
-# Run the outyet command by default when the container starts.
+# Компилируем бинарник auth_service
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./auth_service/cmd/app/main.go
 
-ENTRYPOINT go run ./auth_service/cmd/app/main.go
+# Stage 2: runner
+FROM alpine:latest AS runner
 
-# Document that the service listens on port 8080.
+WORKDIR /app
+
+# Копируем скомпилированный бинарник из builder
+COPY --from=builder /app/server .
+
+# Копируем файл конфига базы данных
+COPY --from=builder /build/db/config/config.yaml ./db/config/config.yaml
+
 EXPOSE 8081 8087
+
+ENTRYPOINT ["/app/server"]

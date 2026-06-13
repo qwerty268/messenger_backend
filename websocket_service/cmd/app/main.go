@@ -1,23 +1,29 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
-
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/protos/gen/go/authv1"
-	authDelivery "github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/middleware"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/delivery"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/websocket_service/internal/websocket/usecase"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/qwerty268/messenger_backend/protos/gen/go/authv1"
+	authDelivery "github.com/qwerty268/messenger_backend/websocket_service/internal/middleware"
+	"github.com/qwerty268/messenger_backend/websocket_service/internal/websocket/delivery"
+	"github.com/qwerty268/messenger_backend/websocket_service/internal/websocket/usecase"
 )
 
-const host = "patefon"
-const port = 8082
+const (
+	// host — DNS-имя K8s Service для gRPC чат-сервера main-app
+	host = "main-app"
+	port = 8082
+)
 
 func main() {
 	// подключаем rebbit mq
@@ -29,24 +35,22 @@ func main() {
 		_ = conn.Close() // Закрываем подключение в случае удачной попытки
 	}()
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("failed to open channel. Error: %s", err)
-	}
-	defer func() {
-		_ = ch.Close() // Закрываем канал в случае удачной попытки открытия
-	}()
 	log.Println("rebbit mq подключен")
 
-	socketUsecase := usecase.NewWebsocketUsecase(ch, host, port)
+	// Передаем соединение, а не один канал: внутри usecase будут созданы
+	// отдельные AMQP-каналы для каждого consumer'а (RabbitMQ не позволяет
+	// иметь больше одного consumer'а на канале).
+	socketUsecase := usecase.NewWebsocketUsecase(conn, host, port)
 	socketDelivery := delivery.NewWebsocket(*socketUsecase)
 
 	router := mux.NewRouter()
 
+	router = router.PathPrefix("/api/").Subrouter()
+
 	// auth
 
 	grpcConnAuth, err := grpc.Dial(
-		"auth:8081",
+		"auth-service:8081",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -58,12 +62,30 @@ func main() {
 	auth := authDelivery.New(authClient)
 
 	// ручки
+	// index.html — опциональный (используется только для отладочной страницы /index)
+	if _, err := os.Stat("index.html"); err == nil {
+		tmpl := template.Must(template.ParseFiles("index.html"))
+		router.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
+			_ = tmpl.Execute(w, nil)
+		})
+	} else {
+		log.Printf("index.html не найден (%v), пропускаем регистрацию /index", err)
+	}
+
 	router.HandleFunc("/startwebsocket", auth.Authorize(socketDelivery.HandleConnection))
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())
 
+	c := cors.New(cors.Options{
+		AllowOriginFunc:  func(origin string) bool { return true },
+		AllowCredentials: true,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
+		AllowedHeaders:   []string{"*"},
+	})
+	handler := c.Handler(router)
+
 	log.Println("Starting server on :8083")
-	if err := http.ListenAndServe(":8083", router); err != nil {
+	if err := http.ListenAndServe(":8083", handler); err != nil {
 		log.Fatal(err)
 	}
 }

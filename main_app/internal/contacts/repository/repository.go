@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/global_utils/logger"
-	"github.com/go-park-mail-ru/2024_2_EaglesDesigner/main_app/internal/contacts/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4/pgxpool"
+
+	"github.com/qwerty268/messenger_backend/global_utils/logger"
+	"github.com/qwerty268/messenger_backend/main_app/internal/contacts/models"
 )
 
 var ErrContactAlreadyExist = errors.New("contact already exist")
@@ -41,9 +42,9 @@ func (r *Repository) GetContacts(ctx context.Context, username string) (contacts
 			name,
 			avatar_path
 		FROM public."user"
-		WHERE id IN 
+		WHERE id IN
 		(
-			SELECT contact_id 
+			SELECT contact_id
 			FROM public."contact"
 			WHERE user_id = (SELECT id FROM public."user" WHERE username = $1)
 		);`,
@@ -90,9 +91,9 @@ func (r *Repository) AddContact(ctx context.Context, contactData models.ContactD
 
 	_, err = tx.Exec(
 		ctx,
-		`INSERT INTO public.contact 
-		(id, 
-		user_id, 
+		`INSERT INTO public.contact
+		(id,
+		user_id,
 		contact_id
 		)
 		VALUES ($1,$2, (SELECT id FROM public."user" WHERE username = $3));`,
@@ -100,7 +101,6 @@ func (r *Repository) AddContact(ctx context.Context, contactData models.ContactD
 		contactData.UserID,
 		contactData.ContactUsername,
 	)
-
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			log.Errorf("Контакт уже существует")
@@ -117,7 +117,7 @@ func (r *Repository) AddContact(ctx context.Context, contactData models.ContactD
 
 	err = tx.QueryRow(
 		ctx,
-		`SELECT 
+		`SELECT
 			id,
 			name,
 			avatar_path
@@ -125,7 +125,6 @@ func (r *Repository) AddContact(ctx context.Context, contactData models.ContactD
 		WHERE username = $1;`,
 		contactData.ContactUsername,
 	).Scan(&contact.ID, &contact.Name, &contact.AvatarURL)
-
 	if err != nil {
 		log.Errorf("Не удалось получить данные контакта: %v", err)
 		return models.ContactDAO{}, err
@@ -151,7 +150,7 @@ func (r *Repository) DeleteContact(ctx context.Context, contactData models.Conta
 
 	result, err := conn.Exec(
 		ctx,
-		`DELETE FROM public.contact 
+		`DELETE FROM public.contact
 		WHERE user_id = $1 AND contact_id = (SELECT id FROM public."user" WHERE username = $2);`,
 		contactData.UserID,
 		contactData.ContactUsername,
@@ -193,12 +192,12 @@ func (r *Repository) SearchUserContacts(ctx context.Context, userID uuid.UUID, k
 			name,
 			avatar_path
 		FROM public."user"
-		WHERE id IN 
+		WHERE id IN
 		(
-			SELECT contact_id 
+			SELECT contact_id
 			FROM public."contact"
-			WHERE 
-				user_id = $1 AND 
+			WHERE
+				user_id = $1 AND
 				(POSITION(LOWER($2) IN LOWER(username)) > 0 OR POSITION(LOWER($2) IN LOWER(name)) > 0)
 		);`,
 		userID,
@@ -251,12 +250,12 @@ func (r *Repository) SearchGlobalUsers(ctx context.Context, userID uuid.UUID, ke
 				name,
 				avatar_path
 			FROM public."user"
-			WHERE 
+			WHERE
 				id <> $1 AND
 				(POSITION(LOWER($2) IN LOWER(username)) > 0 OR POSITION(LOWER($2) IN LOWER(name)) > 0)
 		) AS u
 		WHERE id NOT IN (
-			SELECT contact_id 
+			SELECT contact_id
 			FROM public."contact"
 			WHERE user_id = $1
 		);`,
