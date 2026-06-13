@@ -37,7 +37,6 @@ import (
 	filesDelivery "github.com/qwerty268/messenger_backend/main_app/internal/files/delivery"
 	filesRepo "github.com/qwerty268/messenger_backend/main_app/internal/files/repository"
 	filesUC "github.com/qwerty268/messenger_backend/main_app/internal/files/usecase"
-	"github.com/qwerty268/messenger_backend/main_app/internal/loadtest"
 	messageDelivery "github.com/qwerty268/messenger_backend/main_app/internal/messages/delivery"
 	messageRepository "github.com/qwerty268/messenger_backend/main_app/internal/messages/repository"
 	messageUsecase "github.com/qwerty268/messenger_backend/main_app/internal/messages/usecase"
@@ -191,8 +190,6 @@ func main() {
 		})
 	})
 
-
-
 	router.HandleFunc("/", auth.Authorize(auth.AuthHandler)).Methods("GET", "OPTIONS")
 	router.PathPrefix("/docs/").HandlerFunc(httpSwagger.WrapHandler)
 	router.HandleFunc("/auth", auth.Authorize(auth.AuthHandler)).Methods("GET", "OPTIONS")
@@ -238,10 +235,6 @@ func main() {
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())
 	metric.RecordMetrics()
-
-	// нагрузочное тестирование
-	loadtest.InitRabbitMQ(ch)
-	loadtest.RegisterRoutes(router)
 
 	// хз чо это
 	http.HandleFunc("/", httpSwagger.Handler())

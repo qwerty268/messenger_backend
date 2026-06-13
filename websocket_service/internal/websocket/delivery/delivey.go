@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
 	"github.com/qwerty268/messenger_backend/global_utils/logger"
@@ -38,6 +37,13 @@ var upgrader = websocket.Upgrader{
 			"https://localhost:9090",
 			"http://127.0.0.1:9090",
 			"https://127.0.0.1:9090",
+			// фронтенд в режиме разработки
+			"http://localhost:3000",
+			"https://localhost:3000",
+			"http://localhost:3001",
+			"https://localhost:3001",
+			"http://127.0.0.1:3000",
+			"http://127.0.0.1:3001",
 		}
 
 		for _, origin := range allowedOrigins {
@@ -62,22 +68,13 @@ func NewWebsocket(usecase websocketUsecase.WebsocketUsecase) Webcosket {
 func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	metric.IncHit()
 	log := logger.LoggerWithCtx(r.Context(), logger.Log)
-
-	// Для нагрузочного тестирования используем фиксированного пользователя
-	var userID string
-	if r.URL.Path == "/api/startwebsocket-loadtest" {
-		// Используем ID пользователя user11 для нагрузочного тестирования
-		userID = "39a9aea0-d461-437d-b4eb-bf030a0efc80"
-		log.Printf("Нагрузочное тестирование: пользователь %v", userID)
-	} else {
-		user, ok := r.Context().Value(middleware.UserKey).(middleware.User)
-		if !ok {
-			responser.SendError(r.Context(), w, "Не переданы параметры", http.StatusInternalServerError)
-			return
-		}
-		userID = user.ID.String()
-		log.Printf("Пользователь %v Открыл сокет", user.ID)
+	user, ok := r.Context().Value(middleware.UserKey).(middleware.User)
+	if !ok {
+		responser.SendError(r.Context(), w, "Не переданы параметры", http.StatusInternalServerError)
+		return
 	}
+
+	log.Printf("Пользователь %v Открыл сокет", user.ID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -90,14 +87,7 @@ func (h *Webcosket) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	eventChannel := make(chan websocketUsecase.AnyEvent, 10)
 
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		log.Errorf("Не удалось преобразовать userID в UUID: %v", err)
-		responser.SendError(r.Context(), w, "Invalid user ID", http.StatusInternalServerError)
-		return
-	}
-
-	err = h.usecase.InitBrokersForUser(userUUID, eventChannel)
+	err = h.usecase.InitBrokersForUser(user.ID, eventChannel)
 	if err != nil {
 		log.Errorf("Не удалось иницировать брокеры для пользователя")
 		responser.SendError(r.Context(), w, "Нет нужных параметров", http.StatusInternalServerError)

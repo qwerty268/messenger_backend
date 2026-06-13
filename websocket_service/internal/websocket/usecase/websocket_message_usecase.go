@@ -35,8 +35,8 @@ func DeserializeMessageEvent(data []byte) (MessageEvent, error) {
 // consumeMessages принимает информацию о сообщениях (добавление/изменение/удаление).
 func (w *WebsocketUsecase) consumeMessages() {
 	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+	log.Infof("consumeMessages: starting consumer on 'message' queue")
 	for {
-		log.Infof("starting consumer for queue %q", "message")
 		messages, err := w.chMessages.Consume(
 			"message", // queue
 			"",        // consumer
@@ -47,8 +47,9 @@ func (w *WebsocketUsecase) consumeMessages() {
 			nil,       // args
 		)
 		if err != nil {
-			log.Fatalf("failed to register a consumer. Error: %s", err)
+			log.Fatalf("consumeMessages: failed to register a consumer. Error: %s", err)
 		}
+		log.Infof("consumeMessages: consumer registered, waiting for messages")
 		for message := range messages {
 			log.Printf("received a message: %s", message.Body)
 			msg, err := DeserializeMessageEvent(message.Body)
@@ -57,7 +58,7 @@ func (w *WebsocketUsecase) consumeMessages() {
 				continue
 			}
 			if _, ok := w.onlineChats[msg.Message.ChatId]; !ok {
-				w.initNewChatBroker(msg.Message.ChatId, msg.Message.AuthorID)
+				w.initNewChatBroker(msg.Message.ChatId)
 			}
 			w.sendMessage(msg)
 		}

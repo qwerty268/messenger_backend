@@ -18,8 +18,10 @@ FROM alpine:latest AS runner
 
 WORKDIR /app
 
-# Копируем только скомпилированный бинарник из builder
+# Копируем скомпилированный бинарник из builder
 COPY --from=builder /app/server .
-COPY index.html .
+
+EXPOSE 8080
 
 ENTRYPOINT ["/app/server"]
+

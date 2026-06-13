@@ -28,8 +28,8 @@ type ChatEvent struct {
 // consumeChats принимает информацию об изменении чатов.
 func (w *WebsocketUsecase) consumeChats() {
 	log := logger.LoggerWithCtx(context.Background(), logger.Log)
+	log.Infof("consumeChats: starting consumer on 'chat' queue")
 	for {
-		log.Infof("starting consumer for queue %q", "chat")
 		messages, err := w.chChats.Consume(
 			"chat", // queue
 			"",     // consumer
@@ -40,8 +40,9 @@ func (w *WebsocketUsecase) consumeChats() {
 			nil,    // args
 		)
 		if err != nil {
-			log.Fatalf("failed to register a consumer. Error: %s", err)
+			log.Fatalf("consumeChats: failed to register a consumer. Error: %s", err)
 		}
+		log.Infof("consumeChats: consumer registered, waiting for messages")
 		for message := range messages {
 			log.Infof("received a message: %s", message.Body)
 			event, err := chatEvent.DeserializeEvent(message.Body)
@@ -61,7 +62,7 @@ func (w *WebsocketUsecase) addChatEventIntoChatRutine(event chatEvent.Event) {
 	log.Infof("Отправляем новый ивент %v в брокер", event)
 	if !w.isChatActive(event.ChatId) {
 		log.Infof("Чат %v не активен", event.ChatId)
-		err := w.initNewChatBrokerForEvent(event.ChatId)
+		err := w.initNewChatBroker(event.ChatId)
 		if err != nil {
 			log.Errorf("Не удалось иницализировать нового брокера для чата %v: %v", event.ChatId, err)
 			return
@@ -71,32 +72,12 @@ func (w *WebsocketUsecase) addChatEventIntoChatRutine(event chatEvent.Event) {
 	channel <- event
 }
 
-func (w *WebsocketUsecase) initNewChatBrokerForEvent(chatId uuid.UUID) error {
-	log := logger.LoggerWithCtx(context.Background(), logger.Log)
-
-	log.Infof("Инициализация нового брокера для чата %v (для события)", chatId)
-
-	users, err := w.getOnlineUsersInChat(chatId)
-	if err != nil {
-		return err
-	}
-	
-	log.Infof("Онлайн пользователи в чате %v: %v", chatId, users)
-
-	w.onlineChats[chatId] = ChatInfo{
-		events: make(chan chatEvent.Event, 10),
-		users:  users,
-	}
-	go w.chatBroker(chatId)
-	return nil
-}
-
 func (w *WebsocketUsecase) isChatActive(chatId uuid.UUID) bool {
 	_, ok := w.onlineChats[chatId]
 	return ok
 }
 
-func (w *WebsocketUsecase) initNewChatBroker(chatId uuid.UUID, authorID uuid.UUID) error {
+func (w *WebsocketUsecase) initNewChatBroker(chatId uuid.UUID) error {
 	log := logger.LoggerWithCtx(context.Background(), logger.Log)
 
 	log.Infof("Инициализация нового брокера для чата %v", chatId)
@@ -105,15 +86,6 @@ func (w *WebsocketUsecase) initNewChatBroker(chatId uuid.UUID, authorID uuid.UUI
 	if err != nil {
 		return err
 	}
-
-	// Если автор сообщения онлайн и его нет в списке пользователей чата, добавляем его
-	if _, ok := w.onlineUsers[authorID]; ok {
-		if _, exists := users[authorID]; !exists {
-			users[authorID] = struct{}{}
-			log.Infof("Добавляем автора сообщения %v в онлайн пользователи чата %v", authorID, chatId)
-		}
-	}
-
 	log.Infof("Онлайн пользователи в чате %v: %v", chatId, users)
 
 	w.onlineChats[chatId] = ChatInfo{

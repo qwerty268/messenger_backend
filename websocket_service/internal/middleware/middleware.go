@@ -38,23 +38,6 @@ func (d *Delivery) Authorize(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		// Отключаем авторизацию для нагрузочного тестирования
-		if r.URL.Path == "/api/startwebsocket-loadtest" {
-			// Используем фиксированного пользователя для нагрузочного тестирования
-			userID, _ := uuid.Parse("39a9aea0-d461-437d-b4eb-bf030a0efc80")
-			testUser := User{
-				ID:       userID,
-				Username: "user11",
-				Name:     "Тестовый Пользователь",
-				Version:  0,
-			}
-			ctx = context.WithValue(ctx, UserKey, testUser)
-			ctx = context.WithValue(ctx, MuxParamsKey, mux.Vars(r))
-			r = r.WithContext(ctx)
-			next(w, r)
-			return
-		}
-
 		token, err := d.parseCookies(r.Cookies())
 		if err != nil {
 			log.Println("не получилось получить токен")

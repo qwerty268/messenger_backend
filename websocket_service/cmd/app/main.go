@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -18,6 +19,7 @@ import (
 )
 
 const (
+	// host — DNS-имя K8s Service для gRPC чат-сервера main-app
 	host = "main-app"
 	port = 8082
 )
@@ -34,6 +36,9 @@ func main() {
 
 	log.Println("rebbit mq подключен")
 
+	// Передаем соединение, а не один канал: внутри usecase будут созданы
+	// отдельные AMQP-каналы для каждого consumer'а (RabbitMQ не позволяет
+	// иметь больше одного consumer'а на канале).
 	socketUsecase := usecase.NewWebsocketUsecase(conn, host, port)
 	socketDelivery := delivery.NewWebsocket(*socketUsecase)
 
@@ -56,14 +61,17 @@ func main() {
 	auth := authDelivery.New(authClient)
 
 	// ручки
-	tmpl := template.Must(template.ParseFiles("index.html"))
-
-	router.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
-		tmpl.Execute(w, nil)
-	})
+	// index.html — опциональный (используется только для отладочной страницы /index)
+	if _, err := os.Stat("index.html"); err == nil {
+		tmpl := template.Must(template.ParseFiles("index.html"))
+		router.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
+			_ = tmpl.Execute(w, nil)
+		})
+	} else {
+		log.Printf("index.html не найден (%v), пропускаем регистрацию /index", err)
+	}
 
 	router.HandleFunc("/startwebsocket", auth.Authorize(socketDelivery.HandleConnection))
-	router.HandleFunc("/startwebsocket-loadtest", socketDelivery.HandleConnection) // Без аутентификации для нагрузочного тестирования
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())
 

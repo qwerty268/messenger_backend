@@ -95,7 +95,6 @@ func (d *Delivery) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("не удалось аутентифицировать пользователя")
 		responser.SendError(ctx, w, "Invalid format JSON", http.StatusUnauthorized)
-		return
 	}
 
 	if grpcResp.GetIsAuthenticated() {
@@ -363,8 +362,8 @@ func (d *Delivery) setTokens(w http.ResponseWriter, r *http.Request, username st
 		Value:    grcpResp.GetToken(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 
