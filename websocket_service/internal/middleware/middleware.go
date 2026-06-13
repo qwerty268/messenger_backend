@@ -80,8 +80,8 @@ func (d *Delivery) setTokens(w http.ResponseWriter, r *http.Request, username st
 		Value:    grcpResp.GetToken(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 

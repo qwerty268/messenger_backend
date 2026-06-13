@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -75,8 +76,16 @@ func main() {
 	// мктрики
 	router.Handle("/metrics", promhttp.Handler())
 
+	c := cors.New(cors.Options{
+		AllowOriginFunc:  func(origin string) bool { return true },
+		AllowCredentials: true,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
+		AllowedHeaders:   []string{"*"},
+	})
+	handler := c.Handler(router)
+
 	log.Println("Starting server on :8083")
-	if err := http.ListenAndServe(":8083", router); err != nil {
+	if err := http.ListenAndServe(":8083", handler); err != nil {
 		log.Fatal(err)
 	}
 }

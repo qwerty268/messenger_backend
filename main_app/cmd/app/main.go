@@ -247,17 +247,7 @@ func main() {
 
 func startMainServer(router *mux.Router) {
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"https://patefon.site",
-			"http://localhost:3001",
-			"https://localhost:3001",
-			"http://localhost:8083",
-			"https://localhost:8083",
-			"http://localhost:9090",
-			"https://localhost:9090",
-			"http://127.0.0.1:9090",
-			"https://127.0.0.1:9090",
-		},
+		AllowOriginFunc:    func(origin string) bool { return true },
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"*"},
